@@ -25,7 +25,7 @@ export default function LoginScreen() {
   const router = useRouter();
 
   useEffect(() => {
-    // Hapus nilai email & password setiap kali screen dibuka
+   
     setGmail("");
     setPassword("");
 
