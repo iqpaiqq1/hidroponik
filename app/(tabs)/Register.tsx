@@ -32,7 +32,7 @@ export default function RegisterScreen() {
 
         setLoading(true);
         try {
-            const response = await fetch("http://192.168.0.116:8000/api/user", {
+            const response = await fetch("http://192.168.0.144:8000/api/user", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
