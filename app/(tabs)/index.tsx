@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useRouter } from "expo-router";
 import {
   View,
   Text,
@@ -30,6 +31,7 @@ export default function LandingPage({ navigation }: LandingPageProps) {
     email: "",
     message: ""
   });
+  const router = useRouter();
   const [hoveredLink, setHoveredLink] = useState<number | null>(null);
 
   const handleSubmit = () => {
@@ -42,7 +44,7 @@ export default function LandingPage({ navigation }: LandingPageProps) {
   };
 
   const handleLogin = () => {
-    navigation.navigate("Login");
+    router.push("/LoginScreen");
   };
 
   const NavLink = ({ text, index }: { text: string; index: number }) => {

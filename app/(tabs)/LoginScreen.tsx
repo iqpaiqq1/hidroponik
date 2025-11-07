@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useRouter } from "expo-router";
 import {
   View,
   Text,
@@ -7,68 +8,72 @@ import {
   Alert,
   Dimensions,
   ScrollView,
-  StyleSheet
+  StyleSheet,
+  ActivityIndicator
 } from "react-native";
 
 const { width, height } = Dimensions.get("window");
 const isSmallScreen = width < 768;
 
-interface LoginScreenProps {
-  navigation: any;
-}
-
-export default function LoginScreen({ navigation }: LoginScreenProps) {
-  const [username, setUsername] = useState("");
+export default function LoginScreen() {
+  const [gmail, setGmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleLogin = async () => {
-    if (!username || !password) {
-      Alert.alert("Login Gagal", "Username dan password wajib diisi!");
+    if (!gmail || !password) {
+      Alert.alert("Login Gagal", "Gmail dan password wajib diisi!");
       return;
     }
 
+    setLoading(true);
     try {
-      // Ganti IP berikut dengan IP lokal tempat Laravel kamu jalan
-      const response = await fetch("http://192.168.1.5:8000/api/login", {
+      const response = await fetch("http://192.168.0.116:8000/api/login", {
         method: "POST",
+        mode: "cors",
         headers: {
           "Content-Type": "application/json",
-          "Accept": "application/json",
+          Accept: "application/json",
         },
-        body: JSON.stringify({
-          username: username,
-          password: password,
-        }),
+        body: JSON.stringify({ gmail, password }),
+
       });
 
       const data = await response.json();
+      console.log("Response:", data);
 
       if (response.ok) {
         Alert.alert("Login Berhasil!", `Selamat datang ${data.data.nama}!`);
-        navigation.navigate("Home", { user: data.data });
+      
+        router.push({
+          pathname: "/dashboard",
+          params: { gmail: data.data.gmail, nama: data.data.nama },
+        });
       } else {
         Alert.alert("Login Gagal", data.message || "Username atau password salah");
       }
     } catch (error) {
       console.error("Error login:", error);
       Alert.alert("Kesalahan", "Tidak dapat terhubung ke server");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <View style={[styles.container, isSmallScreen && styles.containerMobile]}>
-        {/* Panel Kiri - Form Login */}
         <View style={[styles.loginPanel, isSmallScreen && styles.loginPanelMobile]}>
           <Text style={styles.title}>Login</Text>
 
           <TextInput
             style={styles.input}
-            placeholder="Masukkan username"
+            placeholder="Masukkan gmail"
             placeholderTextColor="#999"
-            value={username}
-            onChangeText={setUsername}
+            value={gmail}
+            onChangeText={setGmail}
             autoCapitalize="none"
           />
 
@@ -83,7 +88,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
                 value={password}
                 onChangeText={setPassword}
               />
-              <TouchableOpacity
+                <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
                 style={styles.eyeIcon}
               >
@@ -92,19 +97,22 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             </View>
           </View>
 
-          <TouchableOpacity style={styles.button} onPress={handleLogin}>
-            <Text style={styles.buttonText}>Login</Text>
+          <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Login</Text>
+            )}
           </TouchableOpacity>
 
           <View style={styles.registerContainer}>
             <Text style={styles.registerText}>Belum punya akun? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate("Register")}>
+            <TouchableOpacity onPress={() => router.push("/Register")}>
               <Text style={styles.registerLink}>Regis di sini!</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Panel Kanan - Welcome Message */}
         <View style={[styles.welcomePanel, isSmallScreen && styles.welcomePanelMobile]}>
           <Text style={[styles.logoText, isSmallScreen && styles.logoTextMobile]}>
             Agrotech
@@ -122,18 +130,14 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  scrollContainer: {
-    flexGrow: 1,
-  },
+  scrollContainer: { flexGrow: 1 },
   container: {
     flex: 1,
     flexDirection: "row",
     backgroundColor: "#f5f5f5",
     minHeight: height,
   },
-  containerMobile: {
-    flexDirection: "column",
-  },
+  containerMobile: { flexDirection: "column" },
   loginPanel: {
     flex: 1,
     backgroundColor: "#fff",
@@ -141,11 +145,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     minWidth: 400,
   },
-  loginPanelMobile: {
-    minWidth: "100%",
-    padding: 20,
-    paddingTop: 40,
-  },
+  loginPanelMobile: { minWidth: "100%", padding: 20, paddingTop: 40 },
   welcomePanel: {
     flex: 1,
     justifyContent: "center",
@@ -160,12 +160,7 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
     minHeight: 300,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: "600",
-    marginBottom: 30,
-    color: "#333",
-  },
+  title: { fontSize: 32, fontWeight: "600", marginBottom: 30, color: "#333" },
   input: {
     width: "100%",
     height: 55,
@@ -177,10 +172,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: "#fff",
   },
-  passwordContainer: {
-    width: "100%",
-    marginBottom: 25,
-  },
+  passwordContainer: { width: "100%", marginBottom: 25 },
   passwordLabel: {
     fontSize: 16,
     fontWeight: "600",
@@ -195,15 +187,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "#fff",
   },
-  passwordInput: {
-    flex: 1,
-    height: 55,
-    paddingHorizontal: 20,
-    fontSize: 16,
-  },
-  eyeIcon: {
-    padding: 15,
-  },
+  passwordInput: { flex: 1, height: 55, paddingHorizontal: 20, fontSize: 16 },
+  eyeIcon: { padding: 15 },
   button: {
     width: "100%",
     height: 55,
@@ -213,25 +198,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 20,
   },
-  buttonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "600",
-  },
+  buttonText: { color: "#fff", fontSize: 18, fontWeight: "600" },
   registerContainer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
   },
-  registerText: {
-    fontSize: 14,
-    color: "#666",
-  },
-  registerLink: {
-    fontSize: 14,
-    color: "#4a7c2c",
-    fontWeight: "600",
-  },
+  registerText: { fontSize: 14, color: "#666" },
+  registerLink: { fontSize: 14, color: "#4a7c2c", fontWeight: "600" },
   logoText: {
     fontSize: 48,
     fontWeight: "bold",
@@ -239,9 +213,7 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     marginBottom: 20,
   },
-  logoTextMobile: {
-    fontSize: 36,
-  },
+  logoTextMobile: { fontSize: 36 },
   welcomeText: {
     fontSize: 28,
     fontWeight: "bold",
@@ -249,13 +221,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 40,
   },
-  welcomeTextMobile: {
-    fontSize: 20,
-  },
-  copyright: {
-    position: "absolute",
-    bottom: 30,
-    fontSize: 12,
-    color: "#fff",
-  },
+  welcomeTextMobile: { fontSize: 20 },
+  copyright: { position: "absolute", bottom: 30, fontSize: 12, color: "#fff" },
 });
