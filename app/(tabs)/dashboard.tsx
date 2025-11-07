@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
@@ -18,13 +19,16 @@ export default function DashboardScreen() {
 
   const handleLogout = async () => {
     try {
-      const response = await fetch("http://192.168.0.116:8000/api/logout", {
+      const response = await fetch("http://192.168.0.144:8000/api/logout", {
         method: "GET",
       });
 
+      // Hapus data user dari penyimpanan lokal
+      await AsyncStorage.removeItem("user");
+
       if (response.ok) {
         alert("Logout Berhasil!");
-        router.push("/");
+        router.push("/"); // balik ke landing page
       } else {
         alert("Gagal Logout");
       }
@@ -32,6 +36,20 @@ export default function DashboardScreen() {
       alert("Tidak dapat terhubung ke server.");
     }
   };
+  
+  useEffect(() => {
+    const checkUser = async () => {
+      const user = await AsyncStorage.getItem("user");
+      if (user) {
+        const parsed = JSON.parse(user);
+        router.replace({
+          pathname: "/dashboard",
+          params: { gmail: parsed.gmail, nama: parsed.nama },
+        });
+      }
+    };
+    checkUser();
+  }, []);
 
   type MenuItemProps = {
     icon: React.ComponentType<{ size?: number; color?: string }>;
@@ -48,17 +66,18 @@ export default function DashboardScreen() {
         active && { backgroundColor: "#4A7C2C", borderRadius: 12 },
       ]}
     >
-      <Icon size={20} color={active ? "#fff" : "#3e2a10"} />
+      <Icon size={20} color={active ? "#fff" : "#d1c7b8"} /> {/* <— warna nonaktif lebih terang */}
       <Text
         style={[
           styles.menuText,
-          { color: active ? "#fff" : "#3e2a10", fontWeight: active ? "600" : "400" },
+          { color: active ? "#fff" : "#d1c7b8", fontWeight: active ? "600" : "400" },
         ]}
       >
         {label}
       </Text>
     </TouchableOpacity>
   );
+
 
   return (
     <View style={styles.container}>
@@ -68,7 +87,13 @@ export default function DashboardScreen() {
 
         <ScrollView style={styles.menuList} showsVerticalScrollIndicator={false}>
           <MenuItem icon={LayoutGrid} label="Dashboard" active onPress={() => { }} />
-          <MenuItem icon={Leaf} label="Tanaman" onPress={() => { } } active={undefined} />
+          <MenuItem icon={Leaf} label="Tanaman" onPress={() =>
+            router.push({
+              pathname: "/tanaman",
+              params: { gmail, nama },
+            })
+          }
+          />
           <MenuItem icon={Dog} label="Ternak" onPress={() => { } } active={undefined} />
           <MenuItem icon={Cpu} label="Sensor" onPress={() => { } } active={undefined} />
           <MenuItem icon={BarChart3} label="Laporan" onPress={() => { } } active={undefined} />

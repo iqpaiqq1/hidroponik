@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import { useRouter } from "expo-router";
 import {
   View,
@@ -22,6 +24,14 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  useEffect(() => {
+    // Hapus nilai email & password setiap kali screen dibuka
+    setGmail("");
+    setPassword("");
+
+    // Pastikan tidak ada sesi tersisa
+    AsyncStorage.removeItem("user");
+  }, []);
   const handleLogin = async () => {
     if (!gmail || !password) {
       Alert.alert("Login Gagal", "Gmail dan password wajib diisi!");
@@ -30,7 +40,7 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      const response = await fetch("http://192.168.0.116:8000/api/login", {
+      const response = await fetch("http://192.168.0.144:8000/api/login", {
         method: "POST",
         mode: "cors",
         headers: {
@@ -38,15 +48,15 @@ export default function LoginScreen() {
           Accept: "application/json",
         },
         body: JSON.stringify({ gmail, password }),
-
       });
 
       const data = await response.json();
-      console.log("Response:", data);
 
       if (response.ok) {
+        // Simpan data user ke AsyncStorage
+        await AsyncStorage.setItem("user", JSON.stringify(data.data));
+
         Alert.alert("Login Berhasil!", `Selamat datang ${data.data.nama}!`);
-      
         router.push({
           pathname: "/dashboard",
           params: { gmail: data.data.gmail, nama: data.data.nama },
@@ -61,7 +71,6 @@ export default function LoginScreen() {
       setLoading(false);
     }
   };
-
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <View style={[styles.container, isSmallScreen && styles.containerMobile]}>
