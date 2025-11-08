@@ -40,7 +40,7 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      const response = await fetch("http://192.168.0.144:8000/api/login", {
+      const response = await fetch("http://10.102.220.183:8000/api/login", {
         method: "POST",
         mode: "cors",
         headers: {

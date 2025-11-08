@@ -19,7 +19,7 @@ export default function DashboardScreen() {
 
   const handleLogout = async () => {
     try {
-      const response = await fetch("http://192.168.0.144:8000/api/logout", {
+      const response = await fetch("http://10.102.220.183:8000/api/logout", {
         method: "GET",
       });
 
@@ -89,7 +89,7 @@ export default function DashboardScreen() {
           <MenuItem icon={LayoutGrid} label="Dashboard" active onPress={() => { }} />
           <MenuItem icon={Leaf} label="Tanaman" onPress={() =>
             router.push({
-              pathname: "/tanaman",
+              pathname: "/(tabs)/tanaman/tanamanI",
               params: { gmail, nama },
             })
           }
