@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Clock } from "lucide-react-native";
-import MenuSidebar from "./sidebar";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import MenuSidebar from "../sidebar";
 
 interface Tanaman {
     id_tanaman: number;
@@ -56,7 +56,7 @@ export default function CountdownScreen() {
 
             if (daysRemaining > 3 && percentage < 30) {
                 statusText = "Baru Ditanam";
-                statusColor = "#2196F3"; // biru
+                statusColor = "#2196F3"; 
             } else if (daysRemaining <= 3 && daysRemaining > 0) {
                 statusText = "Segera Panen";
                 statusColor = "#FF9800"; // oranye
@@ -143,15 +143,36 @@ export default function CountdownScreen() {
                     <TouchableOpacity style={[styles.navButton, styles.navButtonActive]}>
                         <Text style={[styles.navText, styles.navTextActive]}>Countdown{'\n'}Masa Panen</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.navButton}>
+                    <TouchableOpacity style={styles.navButton}
+                        onPress={() => router.push({
+                            pathname: "/(tabs)/tanaman/statistik",
+                            params: {
+                                gmail: Array.isArray(gmail) ? gmail[0] : gmail,
+                                nama: Array.isArray(nama) ? nama[0] : nama,
+                            },
+                        })}>
                         <Text style={styles.navText}>Statistik{'\n'}Panen</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.navButton}>
-                        <Text style={styles.navText}>Daftar{'\n'}Tanaman Aktif</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.navButton}>
-                        <Text style={styles.navText}>Jadwal{'\n'}Panen</Text>
-                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.navButton}
+                                            onPress={() => router.push({
+                                                pathname: "/(tabs)/tanaman/aktif",
+                                                params: {
+                                                    gmail: Array.isArray(gmail) ? gmail[0] : gmail,
+                                                    nama: Array.isArray(nama) ? nama[0] : nama,
+                                                },
+                                            })}>
+                                            <Text style={styles.navText}>Daftar{'\n'}Tanaman Aktif</Text>
+                                        </TouchableOpacity>
+                   <TouchableOpacity style={styles.navButton}
+                                           onPress={() => router.push({
+                                               pathname: "/(tabs)/tanaman/panen",
+                                               params: {
+                                                   gmail: Array.isArray(gmail) ? gmail[0] : gmail,
+                                                   nama: Array.isArray(nama) ? nama[0] : nama,
+                                               },
+                                           })}>
+                                           <Text style={styles.navText}>Jadwal{'\n'}Panen</Text>
+                                       </TouchableOpacity>
                 </View>
 
                 {loading ? (

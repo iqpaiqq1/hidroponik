@@ -35,6 +35,7 @@ const tanamanOptions = [
     { nama: "Selada", varietas: "Selada Keriting", lama_panen: "40 Hari" },
     { nama: "Pakcoy", varietas: "Pakcoy Taiwan", lama_panen: "35 Hari" },
     { nama: "Sawi", varietas: "Sawi Putih", lama_panen: "32 Hari" },
+    { nama: "Tomat", varietas: "Tomat Cherry", lama_panen: "0 Hari" },
 ];
 
 const statusOptions = ["Sehat", "Siap Panen", "Perlu Perhatian"];

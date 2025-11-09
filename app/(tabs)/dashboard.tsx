@@ -1,42 +1,18 @@
 import React, { useEffect } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import {
-  LayoutGrid,
-  Leaf,
-  Dog,
-  Cpu,
-  BarChart3,
-  Truck,
-  User,
-  LogOut,
-} from "lucide-react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import MenuSidebar from "./sidebar";
 
 export default function DashboardScreen() {
-  const { gmail, nama } = useLocalSearchParams();
+  const searchParams = useLocalSearchParams();
+  const gmailRaw = searchParams.gmail;
+  const namaRaw = searchParams.nama;
+  const gmail = Array.isArray(gmailRaw) ? gmailRaw[0] : gmailRaw ?? "";
+  const nama = Array.isArray(namaRaw) ? namaRaw[0] : namaRaw ?? "";
+
   const router = useRouter();
 
-  const handleLogout = async () => {
-    try {
-      const response = await fetch("http://10.102.220.183:8000/api/logout", {
-        method: "GET",
-      });
-
-      // Hapus data user dari penyimpanan lokal
-      await AsyncStorage.removeItem("user");
-
-      if (response.ok) {
-        alert("Logout Berhasil!");
-        router.push("/"); // balik ke landing page
-      } else {
-        alert("Gagal Logout");
-      }
-    } catch (error) {
-      alert("Tidak dapat terhubung ke server.");
-    }
-  };
-  
   useEffect(() => {
     const checkUser = async () => {
       const user = await AsyncStorage.getItem("user");
@@ -51,63 +27,9 @@ export default function DashboardScreen() {
     checkUser();
   }, []);
 
-  type MenuItemProps = {
-    icon: React.ComponentType<{ size?: number; color?: string }>;
-    label: string;
-    active?: boolean;
-    onPress?: () => void;
-  };
-
-  const MenuItem: React.FC<MenuItemProps> = ({ icon: Icon, label, active, onPress }) => (
-    <TouchableOpacity
-      onPress={onPress}
-      style={[
-        styles.menuItem,
-        active && { backgroundColor: "#4A7C2C", borderRadius: 12 },
-      ]}
-    >
-      <Icon size={20} color={active ? "#fff" : "#d1c7b8"} /> {/* <— warna nonaktif lebih terang */}
-      <Text
-        style={[
-          styles.menuText,
-          { color: active ? "#fff" : "#d1c7b8", fontWeight: active ? "600" : "400" },
-        ]}
-      >
-        {label}
-      </Text>
-    </TouchableOpacity>
-  );
-
-
   return (
     <View style={styles.container}>
-      {/* Sidebar */}
-      <View style={styles.sidebar}>
-        <Text style={styles.logo}>Agrotech</Text>
-
-        <ScrollView style={styles.menuList} showsVerticalScrollIndicator={false}>
-          <MenuItem icon={LayoutGrid} label="Dashboard" active onPress={() => { }} />
-          <MenuItem icon={Leaf} label="Tanaman" onPress={() =>
-            router.push({
-              pathname: "/(tabs)/tanaman/tanamanI",
-              params: { gmail, nama },
-            })
-          }
-          />
-          <MenuItem icon={Dog} label="Ternak" onPress={() => { } } active={undefined} />
-          <MenuItem icon={Cpu} label="Sensor" onPress={() => { } } active={undefined} />
-          <MenuItem icon={BarChart3} label="Laporan" onPress={() => { } } active={undefined} />
-          <MenuItem icon={Truck} label="Pengiriman" onPress={() => { } } active={undefined} />
-          <MenuItem icon={User} label="Your Profile" onPress={() => { } } active={undefined} />
-        </ScrollView>
-
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <LogOut size={18} color="#fff" />
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Main content area */}
+      <MenuSidebar activeMenu="Dashboard" gmail={gmail} nama={nama} />
       <View style={styles.content}>
         <Text style={styles.welcomeText}>Selamat Datang, {nama} 👋</Text>
         <Text style={styles.subText}>Email: {gmail}</Text>
@@ -118,45 +40,6 @@ export default function DashboardScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, flexDirection: "row", backgroundColor: "#fdfaf2" },
-  sidebar: {
-    width: 220,
-    backgroundColor: "#4b2e12",
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-    justifyContent: "space-between",
-  },
-  logo: {
-    fontSize: 30,
-    color: "#fff",
-    fontStyle: "italic",
-    fontWeight: "bold",
-    marginBottom: 40,
-    textAlign: "center",
-  },
-  menuList: { flexGrow: 1 },
-  menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    marginBottom: 10,
-  },
-  menuText: { fontSize: 15, marginLeft: 10 },
-  logoutButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#3b240d",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    justifyContent: "center",
-  },
-  logoutText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "600",
-    marginLeft: 8,
-  },
   content: {
     flex: 1,
     padding: 30,

@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { Plus, Edit, Trash2, Search } from "lucide-react-native";
-import MenuSidebar from "./sidebar";
-import FormModal from "./formModal";
+import { Edit, Plus, Search, Trash2 } from "lucide-react-native";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import MenuSidebar from "../sidebar";
 import DeleteModal from "./deleteModal";
+import FormModal from "./formModal";
 
 interface Tanaman {
     id_tanaman: number;
@@ -133,7 +133,7 @@ export default function TanamanScreen() {
             />
 
             <View style={styles.content}>
-                {/* Top Navigation Menu */}
+               
                 <View style={styles.topNavContainer}>
                     <TouchableOpacity style={[styles.navButton, styles.navButtonActive]}>
                         <Text style={[styles.navText, styles.navTextActive]}>Daftar Semua{'\n'}Tanaman</Text>
@@ -148,13 +148,34 @@ export default function TanamanScreen() {
                         })}>
                         <Text style={styles.navText}>Countdown{'\n'}Masa Panen</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.navButton}>
+                    <TouchableOpacity style={styles.navButton}
+                        onPress={() => router.push({
+                            pathname: "/(tabs)/tanaman/statistik",
+                            params: {
+                                gmail: Array.isArray(gmail) ? gmail[0] : gmail,
+                                nama: Array.isArray(nama) ? nama[0] : nama,
+                            },
+                        })}>
                         <Text style={styles.navText}>Statistik{'\n'}Panen</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.navButton}>
+                    <TouchableOpacity style={styles.navButton}
+                        onPress={() => router.push({
+                            pathname: "/(tabs)/tanaman/aktif",
+                            params: {
+                                gmail: Array.isArray(gmail) ? gmail[0] : gmail,
+                                nama: Array.isArray(nama) ? nama[0] : nama,
+                            },
+                        })}>
                         <Text style={styles.navText}>Daftar{'\n'}Tanaman Aktif</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.navButton}>
+                    <TouchableOpacity style={styles.navButton}
+                        onPress={() => router.push({
+                            pathname: "/(tabs)/tanaman/panen",
+                            params: {
+                                gmail: Array.isArray(gmail) ? gmail[0] : gmail,
+                                nama: Array.isArray(nama) ? nama[0] : nama,
+                            },
+                        })}>
                         <Text style={styles.navText}>Jadwal{'\n'}Panen</Text>
                     </TouchableOpacity>
                 </View>
@@ -190,7 +211,7 @@ export default function TanamanScreen() {
                 ) : (
                     <ScrollView style={styles.tableContainer}>
                         <View style={styles.table}>
-                            {/* Header Table */}
+                           
                             <View style={[styles.row, styles.tableHeader]}>
                                 <Text style={[styles.cell, styles.headerCell, styles.idCell]}>Id</Text>
                                 <Text style={[styles.cell, styles.headerCell, styles.nameCell]}>Nama Tanaman</Text>
