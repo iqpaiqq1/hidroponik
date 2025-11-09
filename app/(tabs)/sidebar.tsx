@@ -15,7 +15,7 @@ export default function MenuSidebar({ activeMenu, gmail, nama }: MenuSidebarProp
     const menus = [
         { label: "Dashboard", icon: LayoutGrid, path: "/dashboard" },
         { label: "Tanaman", icon: Leaf, path: "/(tabs)/tanaman/tanamanI" },
-        { label: "Ternak", icon: Dog, path: "/ternak" },
+        { label: "Ternak", icon: Dog, path: "/(tabs)/ternak/DataTernak" },
         { label: "Sensor", icon: Cpu, path: "/sensor" },
         { label: "Laporan", icon: BarChart3, path: "/laporan" },
         { label: "Pengiriman", icon: Truck, path: "/pengiriman" },
