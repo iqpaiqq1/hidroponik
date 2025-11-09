@@ -23,7 +23,7 @@ interface TrenBulanan {
     total: number;
 }
 
-const API_URL_PANEN = "http://10.102.220.183:8000/api/panen";
+const API_URL_PANEN = "http://192.168.1.7:8000/api/panen";
 
 export default function StatistikScreen() {
     const { gmail, nama } = useLocalSearchParams();

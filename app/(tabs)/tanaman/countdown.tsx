@@ -24,7 +24,7 @@ interface CountdownData {
     statusColor: string;
 }
 
-const API_URL = "http://10.102.220.183:8000/api/tanaman";
+const API_URL = "http://192.168.1.7:8000/api/tanaman";
 
 export default function CountdownScreen() {
     const { gmail, nama } = useLocalSearchParams();
