@@ -3,7 +3,7 @@ import { Clock } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import MenuSidebar from "../sidebar";
-
+import { API_URLS } from "../../api/apiConfig"
 interface Tanaman {
     id_tanaman: number;
     nm_tanaman: string;
@@ -24,7 +24,7 @@ interface CountdownData {
     statusColor: string;
 }
 
-const API_URL = "http://192.168.1.7:8000/api/tanaman";
+
 
 export default function CountdownScreen() {
     const { gmail, nama } = useLocalSearchParams();
@@ -86,7 +86,7 @@ export default function CountdownScreen() {
 
     const fetchData = async () => {
         try {
-            const response = await fetch(API_URL);
+            const response = await fetch(API_URLS.TANAMAN);
             const data: Tanaman[] = await response.json();
 
             const countdowns: CountdownData[] = data

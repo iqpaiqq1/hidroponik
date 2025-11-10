@@ -3,7 +3,7 @@ import { MoreVertical } from "lucide-react-native";
 import React, { useState } from "react";
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import MenuSidebar from "../sidebar";
-
+import { API_URLS } from "../../api/apiConfig"
 interface Tanaman {
     id_tanaman: number;
     nm_tanaman: string;
@@ -20,8 +20,8 @@ interface TanamanJadwal extends Tanaman {
     hariTersisa: number;
 }
 
-const API_URL_TANAMAN = "http://192.168.1.7:8000/api/tanaman";
-const API_URL_PANEN = "http://192.168.1.7:8000/api/panen";
+
+
 
 export default function JadwalPanenScreen() {
     const { gmail, nama } = useLocalSearchParams();
@@ -58,7 +58,7 @@ export default function JadwalPanenScreen() {
         if (showLoading) setLoading(true);
 
         try {
-            const response = await fetch(API_URL_TANAMAN);
+            const response = await fetch(API_URLS.TANAMAN);
             const data: Tanaman[] = await response.json();
 
             const tanamanDenganEstimasi = data.map(tanaman => {

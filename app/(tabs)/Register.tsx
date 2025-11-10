@@ -1,16 +1,17 @@
-import React, { useState } from "react";
 import { useRouter } from "expo-router";
+import React, { useState } from "react";
 import {
-    View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    ScrollView,
+    StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    Alert,
-    ScrollView,
-    Dimensions,
-    StyleSheet,
-    ActivityIndicator,
+    View,
 } from "react-native";
+import { API_URLS } from "../api/apiConfig";
 
 const { width, height } = Dimensions.get("window");
 const isSmallScreen = width < 768;
@@ -32,7 +33,7 @@ export default function RegisterScreen() {
 
         setLoading(true);
         try {
-            const response = await fetch("http://192.168.1.7:8000/api/user", {
+            const response = await fetch(API_URLS.USER, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

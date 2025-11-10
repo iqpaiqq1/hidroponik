@@ -2,7 +2,7 @@ import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import MenuSidebar from "../sidebar";
-
+import { API_URLS } from "../../api/apiConfig"
 interface Tanaman {
     id_tanaman: number;
     nm_tanaman: string;
@@ -20,8 +20,7 @@ interface TanamanAktif extends Tanaman {
     statusPanen: string;
 }
 
-const API_URL_TANAMAN = "http://10.102.220.183:8000/api/tanaman";
-const API_URL_PANEN = "http://10.102.220.183:8000/api/panen";
+
 
 export default function TanamanAktifScreen() {
     const { gmail, nama } = useLocalSearchParams();
@@ -70,7 +69,7 @@ export default function TanamanAktifScreen() {
         if (showLoading) setLoading(true);
 
         try {
-            const response = await fetch(API_URL_TANAMAN);
+            const response = await fetch(API_URLS.TANAMAN);
             const data: Tanaman[] = await response.json();
 
             const aktif = data

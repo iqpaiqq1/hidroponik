@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import MenuSidebar from "../sidebar";
-
+import { API_URLS } from "../../api/apiConfig"
 interface Panen {
     id_panen: number;
     tgl_panen: string;
@@ -23,7 +23,7 @@ interface TrenBulanan {
     total: number;
 }
 
-const API_URL_PANEN = "http://192.168.1.7:8000/api/panen";
+
 
 export default function StatistikScreen() {
     const { gmail, nama } = useLocalSearchParams();
@@ -34,7 +34,7 @@ export default function StatistikScreen() {
 
     const fetchData = async () => {
         try {
-            const response = await fetch(API_URL_PANEN);
+            const response = await fetch(API_URLS.PANEN);
             const data: Panen[] = await response.json();
             setPanen(data);
 
