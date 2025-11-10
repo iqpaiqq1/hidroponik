@@ -1,8 +1,8 @@
-import React from "react";
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-import { LayoutGrid, Leaf, Dog, Cpu, BarChart3, Truck, User, LogOut } from "lucide-react-native";
-
+import { BarChart3, Cpu, Dog, LayoutGrid, Leaf, LogOut, Truck, User } from "lucide-react-native";
+import React from "react";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { API_URLS } from "../api/apiConfig";
 interface MenuSidebarProps {
     activeMenu: string;
     gmail: string;
@@ -24,7 +24,7 @@ export default function MenuSidebar({ activeMenu, gmail, nama }: MenuSidebarProp
 
     const handleLogout = async () => {
         try {
-            const res = await fetch("http://10.102.220.183:8000/api/logout", { method: "GET" });
+            const res = await fetch(API_URLS.LOGOUT,  { method: "GET" });
             if (res.ok) {
                 alert("Logout Berhasil!");
                 router.push("/");

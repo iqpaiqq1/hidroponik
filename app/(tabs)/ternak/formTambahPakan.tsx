@@ -19,10 +19,11 @@ type Pakan = {
   id_pakan: number;
   nm_pakan: string;
   jumlah_stok: number;
+  stokMaksimal: number;
   tgl_beli: string;
 };
 
-const API_URL = "http://192.168.1.7:8000/api/pakan";
+const API_URL = "http://10.102.220.183:8000/api/pakan";
 
 export default function formTambahPakan() {
   const params = useLocalSearchParams();
@@ -34,6 +35,7 @@ export default function formTambahPakan() {
   const [modalVisible, setModalVisible] = useState(false);
   const [nmPakan, setNmPakan] = useState("");
   const [jumlahStok, setJumlahStok] = useState("");
+  const [stokMaksimal, setStokMaksimal] = useState("");
   const [tglBeli, setTglBeli] = useState(""); // Format: YYYY-MM-DD
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -56,7 +58,7 @@ export default function formTambahPakan() {
   }, []);
 
   const handleSave = async () => {
-    if (!nmPakan || !jumlahStok || !tglBeli) {
+    if (!nmPakan || !jumlahStok || !stokMaksimal|| !tglBeli) {
       return Alert.alert("Error", "Semua field harus diisi");
     }
     try {
@@ -68,7 +70,8 @@ export default function formTambahPakan() {
         body: JSON.stringify({
           nm_pakan: nmPakan,
           jumlah_stok: parseInt(jumlahStok),
-          tgl_beli: tglBeli, // SELALU YYYY-MM-DD
+          stokMaksimal: parseInt(stokMaksimal),
+          tgl_beli: tglBeli,
         }),
       });
 
@@ -91,6 +94,7 @@ export default function formTambahPakan() {
     setNmPakan("");
     setJumlahStok("");
     setTglBeli("");
+    setStokMaksimal("");
     setSelectedId(null);
     setModalVisible(false);
     setShowDatePicker(false);
@@ -100,43 +104,43 @@ export default function formTambahPakan() {
     setSelectedId(item.id_pakan);
     setNmPakan(item.nm_pakan);
     setJumlahStok(item.jumlah_stok.toString());
-    setTglBeli(item.tgl_beli); // Harus YYYY-MM-DD dari API
-    setModalVisible(true);
+    setStokMaksimal(item.stokMaksimal.toString());
+    setTglBeli(item.tgl_beli);
     setShowDatePicker(false);
+    setModalVisible(true); // Pindahkan ke paling akhir
   };
 
   const handleDelete = (id: number) => {
-  Alert.alert(
-    "Hapus Pakan",
-    "Yakin ingin menghapus data pakan ini? Tindakan ini tidak bisa dibatalkan.",
-    [
-      {
-        text: "Batal",
-        style: "cancel",
-      },
-      {
-        text: "Hapus",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
-            if (res.ok) {
-              Alert.alert("Sukses", "Data berhasil dihapus");
-              fetchData();
-            } else {
-              const error = await res.text();
-              Alert.alert("Error", error || "Gagal menghapus");
+    Alert.alert(
+      "Konfirmasi Hapus",
+      "Apakah kamu yakin ingin menghapus data pakan ini?",
+      [
+        { text: "Batal", style: "cancel" },
+        {
+          text: "Hapus",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+              console.log("Response hapus:", res.status);
+
+              if (res.ok) {
+                Alert.alert("Sukses", "Data pakan berhasil dihapus");
+                fetchData(); // refresh data setelah hapus
+              } else {
+                const error = await res.text();
+                Alert.alert("Error", error || "Gagal menghapus data");
+              }
+            } catch (error) {
+              console.error(error);
+              Alert.alert("Error", "Koneksi ke server gagal");
             }
-          } catch (error) {
-            console.error(error);
-            Alert.alert("Error", "Koneksi gagal");
-          }
+          },
         },
-      },
-    ],
-    { cancelable: true }
-  );
-};
+      ]
+    );
+  };
+
 
   const getWarningItems = () => {
     return data.filter((item) => item.jumlah_stok < 30);
@@ -145,7 +149,7 @@ export default function formTambahPakan() {
   const renderWarningItem = (item: Pakan) => (
     <View style={styles.warningCard} key={item.id_pakan}>
       <View style={styles.warningIcon}>
-        <Text style={styles.warningIconText}>Warning</Text>
+        <Text style={styles.warningIconText}>⚠️</Text>
       </View>
       <Text style={styles.warningText}>
         {item.nm_pakan} Tersisa {item.jumlah_stok} Kg!
@@ -175,18 +179,19 @@ export default function formTambahPakan() {
           </View>
         </View>
         <View style={styles.actionButtons}>
-         <TouchableOpacity
+          <TouchableOpacity
             style={styles.deleteBtn}
-            onPress={() => handleDelete(item.id_pakan)} // Langsung panggil handleDelete
-            >
-            <Text style={styles.btnIcon}>Trash</Text>
+            onPress={() => handleDelete(item.id_pakan)} 
+          >
+            <Text style={styles.btnIcon}>🗑️</Text>
             <Text style={styles.btnText}>Hapus</Text>
-        </TouchableOpacity>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.editBtn}
             onPress={() => handleEdit(item)}
           >
-            <Text style={styles.btnIcon}>Edit</Text>
+            <Text style={styles.btnIcon}>✏️</Text>
             <Text style={styles.btnText}>Edit</Text>
           </TouchableOpacity>
         </View>
@@ -204,7 +209,10 @@ export default function formTambahPakan() {
           <Text style={styles.headerTitle}>Inventori Pakan Ternak</Text>
           <TouchableOpacity
             style={styles.addButton}
-            onPress={() => setModalVisible(true)}
+            onPress={() => {
+              resetForm(); // Reset dulu sebelum buka modal tambah
+              setModalVisible(true);
+            }}
           >
             <Text style={styles.addButtonText}>+ Tambah Stok</Text>
           </TouchableOpacity>
@@ -252,10 +260,28 @@ export default function formTambahPakan() {
                 style={styles.input}
                 value={jumlahStok}
                 keyboardType="numeric"
-                onChangeText={setJumlahStok}
+                onChangeText={(text) => {
+                  // Hanya izinkan angka
+                  const numericValue = text.replace(/[^0-9]/g, '');
+                  setJumlahStok(numericValue);
+                }}
+                maxLength={10}
+              />
+              <TextInput
+                placeholder="Max Stok (Kg)"
+                style={styles.input}
+                value={stokMaksimal}
+                keyboardType="numeric"
+                onChangeText={(text) => {
+                  // Hanya izinkan angka
+                  const numericValue = text.replace(/[^0-9]/g, '');
+                  setStokMaksimal(numericValue);
+                }}
+                maxLength={10}
+              
               />
 
-              {/* TANGGAL: DATE PICKER (TIDAK BISA KETIK) */}
+              {/* TANGGAL: DATE PICKER */}
               <View style={{ marginBottom: 12 }}>
                 <Text style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>
                   Tanggal Beli
@@ -266,7 +292,11 @@ export default function formTambahPakan() {
                   activeOpacity={0.7}
                 >
                   <Text style={{ color: tglBeli ? "#000" : "#999", fontSize: 14 }}>
-                    {tglBeli || "Pilih tanggal..."}
+                    {tglBeli ? new Date(tglBeli).toLocaleDateString("id-ID", {
+                      day: "2-digit",
+                      month: "long",
+                      year: "numeric",
+                    }) : "Pilih tanggal..."}
                   </Text>
                 </TouchableOpacity>
 
@@ -420,7 +450,7 @@ const styles = StyleSheet.create({
   deleteBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1E3A3A",
+    backgroundColor: "#FF6B6B",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 6,
@@ -471,6 +501,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     fontSize: 14,
+    marginBottom: 12,
+    backgroundColor: "white",
   },
   modalButtons: {
     flexDirection: "row",

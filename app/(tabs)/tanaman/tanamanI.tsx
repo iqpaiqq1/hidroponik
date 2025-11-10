@@ -5,7 +5,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOp
 import MenuSidebar from "../sidebar";
 import DeleteModal from "./deleteModal";
 import FormModal from "./formModal";
-
+import { API_URLS } from "../../api/apiConfig"
 interface Tanaman {
     id_tanaman: number;
     nm_tanaman: string;
@@ -17,7 +17,7 @@ interface Tanaman {
     status: string;
 }
 
-const API_URL = "http://192.168.1.7:8000/api/tanaman";
+
 
 export default function TanamanScreen() {
     const { gmail, nama } = useLocalSearchParams();
@@ -30,7 +30,7 @@ export default function TanamanScreen() {
 
     const fetchData = async () => {
         try {
-            const response = await fetch(API_URL);
+            const response = await fetch(API_URLS.TANAMAN);
             const data = await response.json();
             setTanaman(data);
         } catch (error) {
@@ -46,7 +46,7 @@ export default function TanamanScreen() {
 
     const handleAdd = async (newData: any) => {
         try {
-            const response = await fetch(API_URL, {
+            const response = await fetch(API_URLS.TANAMAN, {
                 method: "POST",
                 headers: {
                     Accept: "application/json",
@@ -77,7 +77,7 @@ export default function TanamanScreen() {
         }
 
         try {
-            const response = await fetch(`${API_URL}/${selectedTanaman.id_tanaman}`, {
+            const response = await fetch(`${API_URLS.TANAMAN}/${selectedTanaman.id_tanaman}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(updatedData),
@@ -104,7 +104,7 @@ export default function TanamanScreen() {
         }
 
         try {
-            const response = await fetch(`${API_URL}/${selectedTanaman.id_tanaman}`, {
+            const response = await fetch(`${API_URLS.TANAMAN}/${selectedTanaman.id_tanaman}`, {
                 method: "DELETE",
             });
 

@@ -1,18 +1,19 @@
-import React, { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { useEffect, useState } from "react";
 
 import { useRouter } from "expo-router";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
+  ActivityIndicator,
   Alert,
   Dimensions,
   ScrollView,
   StyleSheet,
-  ActivityIndicator
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from "react-native";
+import { API_URLS } from "../api/apiConfig";
 
 const { width, height } = Dimensions.get("window");
 const isSmallScreen = width < 768;
@@ -29,7 +30,7 @@ export default function LoginScreen() {
     setGmail("");
     setPassword("");
 
-    // Pastikan tidak ada sesi tersisa
+   
     AsyncStorage.removeItem("user");
   }, []);
   const handleLogin = async () => {
@@ -40,7 +41,7 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      const response = await fetch("http://192.168.1.7:8000/api/login", {
+      const response = await fetch(API_URLS.LOGIN, {
         method: "POST",
         mode: "cors",
         headers: {

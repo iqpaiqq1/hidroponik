@@ -21,7 +21,7 @@ type Pakan = {
   stok_maksimal?: number;
 };
 
-const API_URL = "http://192.168.1.7:8000/api/pakan";
+const API_URL = "http://10.102.220.183:8000/api/pakan";
 
 export default function DataTernak() {
   // Ambil params dari router
@@ -103,27 +103,27 @@ export default function DataTernak() {
     setModalVisible(true);
   };
 
-  const handleDelete = async (id: number) => {
-    Alert.alert(
-      "Konfirmasi",
-      "Yakin ingin menghapus data ini?",
-      [
-        { text: "Batal", style: "cancel" },
-        {
-          text: "Hapus",
-          onPress: async () => {
-            try {
-              await fetch(`${API_URL}/${id}`, { method: "DELETE" });
-              Alert.alert("Sukses", "Data berhasil dihapus");
-              fetchData();
-            } catch (error) {
-              Alert.alert("Error", "Gagal menghapus data");
-            }
-          },
-        },
-      ]
-    );
+  const handleDelete = async (id_pakan: number) => {
+    try {
+      const response = await fetch(`http://10.102.220.183:8000/api/pakan/${id_pakan}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log(data.message); // "Data pakan berhasil dihapus"
+        alert("✅ Data pakan berhasil dihapus");
+        fetchData(); // fungsi untuk refresh daftar pakan
+      } else {
+        const errorData = await response.json();
+        alert(`⚠️ Gagal: ${errorData.message}`);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("❌ Terjadi kesalahan koneksi ke server");
+    }
   };
+
 
   const getPercentage = (current: number, max: number = 100) => {
     return Math.round((current / max) * 100);
