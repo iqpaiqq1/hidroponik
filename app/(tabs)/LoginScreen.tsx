@@ -26,13 +26,11 @@ export default function LoginScreen() {
   const router = useRouter();
 
   useEffect(() => {
-   
     setGmail("");
     setPassword("");
-
-   
     AsyncStorage.removeItem("user");
   }, []);
+
   const handleLogin = async () => {
     if (!gmail || !password) {
       Alert.alert("Login Gagal", "Gmail dan password wajib diisi!");
@@ -58,10 +56,29 @@ export default function LoginScreen() {
         await AsyncStorage.setItem("user", JSON.stringify(data.data));
 
         Alert.alert("Login Berhasil!", `Selamat datang ${data.data.nama}!`);
-        router.push({
-          pathname: "/dashboard",
-          params: { gmail: data.data.gmail, nama: data.data.nama },
-        });
+
+        // Role-based routing dengan timeout untuk memastikan render
+        const role = data.data.role.toLowerCase();
+
+        setTimeout(() => {
+          switch (role) {
+            case "user":
+              router.replace("/user/dashboardUser");
+              break;
+            case "petugas":
+              router.replace("/petugas/dashboardPetugas");
+              break;
+            case "kurir":
+              router.replace("/kurir/dashboardKurir");
+              break;
+            case "admin":
+              router.replace("/dashboard");
+              break;
+            default:
+              router.replace("/dashboard");
+              break;
+          }
+        }, 500);
       } else {
         Alert.alert("Login Gagal", data.message || "Username atau password salah");
       }
@@ -72,6 +89,7 @@ export default function LoginScreen() {
       setLoading(false);
     }
   };
+
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <View style={[styles.container, isSmallScreen && styles.containerMobile]}>
@@ -98,7 +116,7 @@ export default function LoginScreen() {
                 value={password}
                 onChangeText={setPassword}
               />
-                <TouchableOpacity
+              <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
                 style={styles.eyeIcon}
               >

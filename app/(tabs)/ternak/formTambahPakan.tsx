@@ -14,7 +14,7 @@ import {
   Platform,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
-
+import { API_URLS } from "../../api/apiConfig"
 type Pakan = {
   id_pakan: number;
   nm_pakan: string;
@@ -23,7 +23,7 @@ type Pakan = {
   tgl_beli: string;
 };
 
-const API_URL = "http://10.102.220.183:8000/api/pakan";
+
 
 export default function formTambahPakan() {
   const params = useLocalSearchParams();
@@ -42,7 +42,7 @@ export default function formTambahPakan() {
 
   const fetchData = async () => {
     try {
-      const res = await fetch(API_URL);
+      const res = await fetch(API_URLS.PAKAN);
       const json = await res.json();
       setData(json);
     } catch (error) {
@@ -63,7 +63,7 @@ export default function formTambahPakan() {
     }
     try {
       const method = selectedId ? "PUT" : "POST";
-      const url = selectedId ? `${API_URL}/${selectedId}` : API_URL;
+      const url = selectedId ? `${API_URLS}/${selectedId}` : API_URLS.PAKAN;
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
@@ -121,7 +121,7 @@ export default function formTambahPakan() {
           style: "destructive",
           onPress: async () => {
             try {
-              const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+              const res = await fetch(`${API_URLS}/${id}`, { method: "DELETE" });
               console.log("Response hapus:", res.status);
 
               if (res.ok) {

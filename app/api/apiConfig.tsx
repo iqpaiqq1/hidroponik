@@ -1,5 +1,5 @@
 
-export const BASE_URL = "http://10.102.220.183:8000/api";
+export const BASE_URL = "http://10.191.220.183:8000/api";
 
 
 export const API_URLS = {
@@ -13,4 +13,5 @@ export const API_URLS = {
     SUPPLY: `${BASE_URL}/supply`,
     REGISTER: `${BASE_URL}/register`,
     USER: `${BASE_URL}/user`,
+    PENGIRIMAN: `${BASE_URL}/pengiriman`,
 };
