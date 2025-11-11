@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import MenuSidebar from "../sidebar";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
+import { API_URLS } from "../../api/apiConfig"
+
 import {
   View,
   Text,
@@ -21,7 +23,7 @@ type Pakan = {
   stok_maksimal?: number;
 };
 
-const API_URL = "http://10.102.220.183:8000/api/pakan";
+
 
 export default function DataTernak() {
   // Ambil params dari router
@@ -40,7 +42,7 @@ export default function DataTernak() {
 
   const fetchData = async () => {
     try {
-      const res = await fetch(API_URL);
+      const res = await fetch(API_URLS.PAKAN);
       const json = await res.json();
       setData(json);
     } catch (error) {
@@ -62,7 +64,7 @@ export default function DataTernak() {
 
     try {
       const method = selectedId ? "PUT" : "POST";
-      const url = selectedId ? `${API_URL}/${selectedId}` : API_URL;
+      const url = selectedId ? `${API_URLS}/${selectedId}` : API_URLS.PAKAN;
 
       const res = await fetch(url, {
         method,
@@ -111,9 +113,9 @@ export default function DataTernak() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log(data.message); // "Data pakan berhasil dihapus"
+        console.log(data.message);
         alert("✅ Data pakan berhasil dihapus");
-        fetchData(); // fungsi untuk refresh daftar pakan
+        fetchData();
       } else {
         const errorData = await response.json();
         alert(`⚠️ Gagal: ${errorData.message}`);
@@ -123,7 +125,6 @@ export default function DataTernak() {
       alert("❌ Terjadi kesalahan koneksi ke server");
     }
   };
-
 
   const getPercentage = (current: number, max: number = 100) => {
     return Math.round((current / max) * 100);
@@ -214,6 +215,31 @@ export default function DataTernak() {
 
       {/* Content Area */}
       <View style={styles.container}>
+        {/* Top Navigation Bar */}
+        <View style={styles.topNavContainer}>
+          <TouchableOpacity
+            style={styles.navButton}
+            onPress={() => router.push({
+              pathname: "/(tabs)/ternak/DataTernak",
+              params: { gmail, nama },
+            })}
+          >
+            <Text style={styles.navText}>Hewan</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.navButton}
+            onPress={() => router.push({
+              pathname: "/(tabs)/ternak/kandang",
+              params: { gmail, nama },
+            })}
+          >
+            <Text style={styles.navText}>Kandang</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.navButton, styles.navButtonActive]}>
+            <Text style={[styles.navText, styles.navTextActive]}>Inventori Pakan</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Inventori Pakan Ternak</Text>
@@ -315,16 +341,51 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#E8F4F8",
+    padding: 20,
+  },
+  // Top Navigation Styles
+  topNavContainer: {
+    flexDirection: "row",
+    backgroundColor: "#1E3A3A",
+    borderRadius: 35,
+    padding: 5,
+    marginBottom: 25,
+    justifyContent: "space-between",
+  },
+  navButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 2,
+  },
+  navButtonActive: {
+    backgroundColor: "#4A3A2A",
+  },
+  navText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "500",
+    textAlign: "center",
+  },
+  navTextActive: {
+    fontWeight: "600",
   },
   header: {
     backgroundColor: "white",
     padding: 20,
-    paddingTop: 40,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
+    borderRadius: 15,
+    marginBottom: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   headerTitle: {
     fontSize: 20,
@@ -343,7 +404,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   warningSection: {
-    padding: 15,
+    marginBottom: 15,
   },
   warningCard: {
     backgroundColor: "#FFF4E6",
@@ -367,7 +428,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   listContainer: {
-    padding: 15,
+    paddingBottom: 15,
   },
   pakanCard: {
     backgroundColor: "white",

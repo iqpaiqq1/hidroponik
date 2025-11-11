@@ -48,8 +48,6 @@ export default function MenuSidebar({ activeMenu, gmail, nama }: MenuSidebarProp
         { label: "Tanaman", icon: Leaf, path: "/(tabs)/tanaman/tanamanI" },
         { label: "Ternak", icon: Dog, path: "/(tabs)/ternak/DataTernak" },
         { label: "Sensor", icon: Cpu, path: "/sensor" },
-        { label: "Laporan", icon: BarChart3, path: "/laporan" },
-        { label: "Pengiriman", icon: Truck, path: "/(tabs)/pengiriman/pengiriman"},
         { label: "Your Profile", icon: User, path: "/(tabs)/profile" },
     ];
 
@@ -129,7 +127,7 @@ const styles = StyleSheet.create({
     sidebar: {
         width: 200,
         height: "100%",
-        backgroundColor: "#4a2f1a",
+        backgroundColor: "#397301",
         paddingTop: 30,
         paddingBottom: 30,
         paddingHorizontal: 18,
@@ -174,7 +172,7 @@ const styles = StyleSheet.create({
         borderRadius: 10,
     },
     menuItemActive: {
-        backgroundColor: "#5a8c36",
+        backgroundColor: "#D5B579",
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
