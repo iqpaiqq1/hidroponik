@@ -17,7 +17,7 @@ type FormDataType = {
     id_tanaman?: number | null;
     id_kandang?: number | null;
     lokasi: string;
-    populasi: string;
+    populasi: string | number;
     suhu: number;
     kelembapan: number;
     produktivitas: number;
@@ -74,7 +74,7 @@ export default function FormModal({
                 id_tanaman: initialData.id_tanaman || null,
                 id_kandang: initialData.id_kandang || null,
                 lokasi: initialData.lokasi || "",
-                populasi: initialData.populasi || "",
+                populasi: initialData.populasi?.toString() || "",
                 suhu: initialData.suhu || 0,
                 kelembapan: initialData.kelembapan || 0,
                 produktivitas: initialData.produktivitas || 0,
@@ -97,6 +97,64 @@ export default function FormModal({
         }
     }, [initialData, visible, activeTab]);
 
+    // Auto-fill ketika pilih kandang
+    const handleKandangChange = (id_kandang: number | null) => {
+        if (id_kandang) {
+            const selectedKandang = kandangList.find(
+                (item) => item.id_kandang === id_kandang
+            );
+
+            if (selectedKandang) {
+                setFormData(prev => ({
+                    ...prev,
+                    id_kandang,
+                    lokasi: selectedKandang.lokasi || "",
+                    populasi: selectedKandang.populasi?.toString() || "",
+                    // Bisa tambah field lain yang mau di auto-fill
+                    // suhu: selectedKandang.suhu_optimal || prev.suhu,
+                    // kelembapan: selectedKandang.kelembapan_optimal || prev.kelembapan,
+                }));
+            }
+        } else {
+            // Reset kalau pilih "Pilih Kandang"
+            setFormData(prev => ({
+                ...prev,
+                id_kandang: null,
+                lokasi: "",
+                populasi: "",
+            }));
+        }
+    };
+
+    // Auto-fill ketika pilih tanaman
+    const handleTanamanChange = (id_tanaman: number | null) => {
+        if (id_tanaman) {
+            const selectedTanaman = tanamanList.find(
+                (item) => item.id_tanaman === id_tanaman
+            );
+
+            if (selectedTanaman) {
+                setFormData(prev => ({
+                    ...prev,
+                    id_tanaman,
+                    lokasi: selectedTanaman.lokasi || "",
+                    populasi: selectedTanaman.populasi?.toString() || "",
+                    // Bisa tambah field lain yang mau di auto-fill
+                    // suhu: selectedTanaman.suhu_optimal || prev.suhu,
+                    // kelembapan: selectedTanaman.kelembapan_optimal || prev.kelembapan,
+                }));
+            }
+        } else {
+            // Reset kalau pilih "Pilih Tanaman"
+            setFormData(prev => ({
+                ...prev,
+                id_tanaman: null,
+                lokasi: "",
+                populasi: "",
+            }));
+        }
+    };
+
     const fetchKandang = async () => {
         try {
             const response = await fetch(API_URLS.KANDANG);
@@ -105,6 +163,8 @@ export default function FormModal({
 
             if (Array.isArray(result)) {
                 setKandangList(result);
+            } else if (result.data && Array.isArray(result.data)) {
+                setKandangList(result.data);
             } else {
                 console.warn("Format data tidak sesuai:", result);
                 setKandangList([]);
@@ -115,14 +175,23 @@ export default function FormModal({
         }
     };
 
-
     const fetchTanaman = async () => {
         try {
             const response = await fetch(API_URLS.TANAMAN);
-            const data = await response.json();
-            setTanamanList(data);
+            const result = await response.json();
+            console.log("Data Tanaman:", result);
+
+            if (Array.isArray(result)) {
+                setTanamanList(result);
+            } else if (result.data && Array.isArray(result.data)) {
+                setTanamanList(result.data);
+            } else {
+                console.warn("Format data tanaman tidak sesuai:", result);
+                setTanamanList([]);
+            }
         } catch (error) {
             console.error("Error fetching tanaman:", error);
+            setTanamanList([]);
         }
     };
 
@@ -162,9 +231,11 @@ export default function FormModal({
             return;
         }
 
-        // Siapkan data untuk dikirim
+        // Konversi populasi ke number
         const dataToSend = {
             ...formData,
+            populasi: parseInt(formData.populasi) || 0,
+        
             id_tanaman: activeTab === "tanaman" ? formData.id_tanaman : null,
             id_kandang: activeTab === "ternak" ? formData.id_kandang : null,
         };
@@ -172,13 +243,16 @@ export default function FormModal({
         onSubmit(dataToSend);
     };
 
+    // Check apakah form dalam mode edit
+    const isEditMode = !!initialData;
+
     return (
         <Modal visible={visible} transparent animationType="slide">
             <View style={styles.overlay}>
                 <View style={styles.modal}>
                     <ScrollView showsVerticalScrollIndicator={false}>
                         <Text style={styles.title}>
-                            {initialData ? "Edit Data Sensor" : "Tambah Data Sensor"}
+                            {isEditMode ? "Edit Data Sensor" : "Tambah Data Sensor"}
                         </Text>
                         <Text style={styles.subtitle}>
                             Mode: {activeTab === "ternak" ? "Kandang" : "Tanaman"}
@@ -190,16 +264,15 @@ export default function FormModal({
                                 <Text style={styles.label}>Kandang *</Text>
                                 <Picker
                                     selectedValue={formData.id_kandang}
-                                    onValueChange={(val) =>
-                                        setFormData({ ...formData, id_kandang: val })
-                                    }
+                                    onValueChange={handleKandangChange}
                                     style={styles.input}
+                                    enabled={!isEditMode} // Disable edit di mode edit
                                 >
                                     <Picker.Item label="Pilih Kandang" value={null} />
                                     {kandangList.map((item) => (
                                         <Picker.Item
                                             key={item.id_kandang}
-                                            label={`${item.nm_kandang} (${item.jenis_hewan || "N/A"})`}
+                                            label={`${item.nm_kandang || 'Kandang'} - ${item.lokasi}`}
                                             value={item.id_kandang}
                                         />
                                     ))}
@@ -210,10 +283,9 @@ export default function FormModal({
                                 <Text style={styles.label}>Tanaman *</Text>
                                 <Picker
                                     selectedValue={formData.id_tanaman}
-                                    onValueChange={(val) =>
-                                        setFormData({ ...formData, id_tanaman: val })
-                                    }
+                                    onValueChange={handleTanamanChange}
                                     style={styles.input}
+                                    enabled={!isEditMode} // Disable edit di mode edit
                                 >
                                     <Picker.Item label="Pilih Tanaman" value={null} />
                                     {tanamanList.map((item) => (
@@ -227,30 +299,47 @@ export default function FormModal({
                             </View>
                         )}
 
-                        {/* Lokasi */}
+                        {/* Lokasi - Auto filled */}
                         <View style={styles.inputGroup}>
                             <Text style={styles.label}>Lokasi *</Text>
                             <TextInput
-                                style={styles.input}
-                                placeholder="Contoh: Kandang A1 / Rak A1"
+                                style={[
+                                    styles.input,
+                                    {
+                                        backgroundColor: formData.lokasi ? "#f0f8ff" : "#fff",
+                                        color: formData.lokasi ? "#0066cc" : "#000"
+                                    }
+                                ]}
                                 value={formData.lokasi}
-                                onChangeText={(val) =>
-                                    setFormData({ ...formData, lokasi: val })
-                                }
+                                placeholder="Akan terisi otomatis..."
+                                editable={!formData.lokasi} // Bisa edit kalau belum ke-isi
+                                onChangeText={(text) => setFormData({ ...formData, lokasi: text })}
                             />
+                            {formData.lokasi && (
+                                <Text style={styles.autoFillText}>✓ Terisi otomatis</Text>
+                            )}
                         </View>
 
-                        {/* Populasi */}
+                        {/* Populasi - Auto filled */}
                         <View style={styles.inputGroup}>
                             <Text style={styles.label}>Populasi *</Text>
                             <TextInput
-                                style={styles.input}
-                                placeholder="Contoh: 250/300"
+                                style={[
+                                    styles.input,
+                                    {
+                                        backgroundColor: formData.populasi ? "#f0fff0" : "#fff",
+                                        color: formData.populasi ? "#228b22" : "#000"
+                                    }
+                                ]}
+                                placeholder="Akan terisi otomatis..."
+                                keyboardType="numeric"
                                 value={formData.populasi}
-                                onChangeText={(val) =>
-                                    setFormData({ ...formData, populasi: val })
-                                }
+                                editable={!formData.populasi} // Bisa edit kalau belum ke-isi
+                                onChangeText={(text) => setFormData({ ...formData, populasi: text })}
                             />
+                            {formData.populasi && (
+                                <Text style={styles.autoFillText}>✓ Terisi otomatis</Text>
+                            )}
                         </View>
 
                         {/* Suhu */}
@@ -372,7 +461,7 @@ export default function FormModal({
                                 onPress={handleSubmit}
                             >
                                 <Text style={styles.saveText}>
-                                    {initialData ? "Simpan" : "Tambah"}
+                                    {isEditMode ? "Simpan" : "Tambah"}
                                 </Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
@@ -464,5 +553,11 @@ const styles = StyleSheet.create({
         color: "#333",
         fontWeight: "600",
         fontSize: 14,
+    },
+    autoFillText: {
+        fontSize: 12,
+        color: "#4A7C2C",
+        marginTop: 4,
+        fontStyle: "italic",
     },
 });
