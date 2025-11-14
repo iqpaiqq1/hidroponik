@@ -30,22 +30,43 @@ export default function SensorScreen() {
     const [activeTab, setActiveTab] = useState<"ternak" | "tanaman">("ternak");
 
     const fetchData = async () => {
+        setLoading(true);
+
         try {
             const tipe = activeTab === "ternak" ? "kandang" : "tanaman";
-            const response = await fetch(`${API_URLS.SENSOR}?tipe=${tipe}`);
-            const result = await response.json();
 
-            if (result.success) {
-                setSensors(result.data);
-            } else {
-                alert("Gagal memuat data sensor");
+            const response = await fetch(`${API_URLS.SENSOR}?tipe=${tipe}`);
+
+            // Kalau response rusak / bukan JSON → tidak crash
+            let result;
+            try {
+                result = await response.json();
+            } catch (e) {
+                result = [];
             }
+
+            // Backend bisa mengirim array langsung → aman
+            if (Array.isArray(result)) {
+                setSensors(result);
+            }
+            // Backend bisa mengirim { data: [...] } → aman
+            else if (result && Array.isArray(result.data)) {
+                setSensors(result.data);
+            }
+            // Jika format apapun → tetap tidak error
+            else {
+                setSensors([]);
+            }
+
         } catch (error) {
-            alert("Gagal memuat data sensor");
+            console.log("Error fetch:", error);
+            setSensors([]);
         } finally {
+            // PASTIKAN LOADING BERHENTI
             setLoading(false);
         }
     };
+
 
     useEffect(() => {
         setLoading(true);
@@ -159,7 +180,7 @@ export default function SensorScreen() {
                 <View style={styles.headerRow}>
                     <Text style={styles.title}>
                         {activeTab === "ternak"
-                            ? "Monitoring Kandang Ayam Petelur"
+                            ? "Monitoring Kandang"
                             : "Monitoring Tanaman"}
                     </Text>
                     <View style={styles.actionButtons}>
