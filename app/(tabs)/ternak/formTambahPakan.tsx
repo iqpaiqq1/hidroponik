@@ -1,53 +1,53 @@
+import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
-import MenuSidebar from "../sidebar";
-import { useLocalSearchParams } from "expo-router";
 import {
-  View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Modal,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  FlatList,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-  Modal,
-  Platform,
+  View,
 } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import { API_URLS } from "../../api/apiConfig"
-type Pakan = {
-  id_pakan: number;
-  nm_pakan: string;
-  jumlah_stok: number;
-  stokMaksimal: number;
-  tgl_beli: string;
+import MenuSidebar from "../sidebar";
+import { API_URLS } from "../../api/apiConfig";
+
+type Kandang = {
+  id_kandang: number;
+  nm_kandang: string;
+  kapasitas: number;
+  jumlah_hewan: number;
+  jenis_hewan: string;
+  keterangan: string;
 };
 
-
-
-export default function formTambahPakan() {
+export default function KandangScreen() {
   const params = useLocalSearchParams();
   const gmail = (params.gmail as string) || "";
   const nama = (params.nama as string) || "";
 
-  const [data, setData] = useState<Pakan[]>([]);
+  const [data, setData] = useState<Kandang[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
-  const [nmPakan, setNmPakan] = useState("");
-  const [jumlahStok, setJumlahStok] = useState("");
-  const [stokMaksimal, setStokMaksimal] = useState("");
-  const [tglBeli, setTglBeli] = useState(""); // Format: YYYY-MM-DD
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [nmKandang, setNmKandang] = useState("");
+  const [kapasitas, setKapasitas] = useState("");
+  const [jumlahHewan, setJumlahHewan] = useState("");
+  const [jenisHewan, setJenisHewan] = useState("");
+  const [keterangan, setKeterangan] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const fetchData = async () => {
+    setLoading(true);
     try {
-      const res = await fetch(API_URLS.PAKAN);
+      const res = await fetch(API_URLS.KANDANG);
       const json = await res.json();
       setData(json);
     } catch (error) {
-      console.error(error);
-      Alert.alert("Error", "Gagal mengambil data");
+      console.error("Fetch error:", error);
+      Alert.alert("Error", "Gagal mengambil data kandang");
     } finally {
       setLoading(false);
     }
@@ -58,62 +58,79 @@ export default function formTambahPakan() {
   }, []);
 
   const handleSave = async () => {
-    if (!nmPakan || !jumlahStok || !stokMaksimal|| !tglBeli) {
-      return Alert.alert("Error", "Semua field harus diisi");
+    if (!nmKandang || !kapasitas || !jumlahHewan || !jenisHewan) {
+      return Alert.alert("Error", "Field wajib harus diisi");
     }
+
+    const payload = {
+      nm_kandang: nmKandang,
+      kapasitas: parseInt(kapasitas),
+      jumlah_hewan: parseInt(jumlahHewan),
+      jenis_hewan: jenisHewan,
+      keterangan: keterangan || "",
+    };
+
     try {
-      const method = selectedId ? "PUT" : "POST";
-      const url = selectedId ? `${API_URLS}/${selectedId}` : API_URLS.PAKAN;
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nm_pakan: nmPakan,
-          jumlah_stok: parseInt(jumlahStok),
-          stokMaksimal: parseInt(stokMaksimal),
-          tgl_beli: tglBeli,
-        }),
-      });
+      const url = selectedId
+        ? `${API_URLS.KANDANG}/${selectedId}`
+        : API_URLS.KANDANG;
 
-      if (!res.ok) {
-        const error = await res.text();
-        throw new Error(error || "Gagal menyimpan");
-      }
+      const options: RequestInit = {
+        method: selectedId ? "PUT" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify(payload),
+      };
 
+      console.log("Request URL:", url);
+      console.log("Request Method:", options.method);
+      console.log("Request Payload:", payload);
+
+      const res = await fetch(url, options);
       const json = await res.json();
-      Alert.alert("Sukses", json.message || "Berhasil disimpan");
-      resetForm();
-      fetchData();
-    } catch (error: any) {
-      console.error(error);
-      Alert.alert("Error", error.message || "Gagal menyimpan data");
+
+      console.log("Response status:", res.status);
+      console.log("Response data:", json);
+
+      if (res.ok) {
+        Alert.alert("Sukses", json.message || "Berhasil disimpan");
+        resetForm();
+        fetchData();
+      } else {
+        Alert.alert("Error", json.message || `Gagal menyimpan data (${res.status})`);
+      }
+    } catch (error) {
+      console.error("Save error:", error);
+      Alert.alert("Error", `Gagal menyimpan data: ${error}`);
     }
   };
 
   const resetForm = () => {
-    setNmPakan("");
-    setJumlahStok("");
-    setTglBeli("");
-    setStokMaksimal("");
+    setNmKandang("");
+    setKapasitas("");
+    setJumlahHewan("");
+    setJenisHewan("");
+    setKeterangan("");
     setSelectedId(null);
     setModalVisible(false);
-    setShowDatePicker(false);
   };
 
-  const handleEdit = (item: Pakan) => {
-    setSelectedId(item.id_pakan);
-    setNmPakan(item.nm_pakan);
-    setJumlahStok(item.jumlah_stok.toString());
-    setStokMaksimal(item.stokMaksimal.toString());
-    setTglBeli(item.tgl_beli);
-    setShowDatePicker(false);
-    setModalVisible(true); // Pindahkan ke paling akhir
+  const handleEdit = (item: Kandang) => {
+    setSelectedId(item.id_kandang);
+    setNmKandang(item.nm_kandang);
+    setKapasitas(item.kapasitas.toString());
+    setJumlahHewan(item.jumlah_hewan.toString());
+    setJenisHewan(item.jenis_hewan);
+    setKeterangan(item.keterangan || "");
+    setModalVisible(true);
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = async (id_kandang: number) => {
     Alert.alert(
       "Konfirmasi Hapus",
-      "Apakah kamu yakin ingin menghapus data pakan ini?",
+      "Apakah Anda yakin ingin menghapus kandang ini?",
       [
         { text: "Batal", style: "cancel" },
         {
@@ -121,19 +138,30 @@ export default function formTambahPakan() {
           style: "destructive",
           onPress: async () => {
             try {
-              const res = await fetch(`${API_URLS}/${id}`, { method: "DELETE" });
-              console.log("Response hapus:", res.status);
+              const url = `${API_URLS.KANDANG}/${id_kandang}`;
+              console.log("Delete URL:", url);
 
-              if (res.ok) {
-                Alert.alert("Sukses", "Data pakan berhasil dihapus");
-                fetchData(); // refresh data setelah hapus
+              const response = await fetch(url, {
+                method: "DELETE",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Accept": "application/json",
+                },
+              });
+
+              console.log("Delete response status:", response.status);
+              const responseData = await response.json();
+              console.log("Delete response data:", responseData);
+
+              if (response.ok) {
+                Alert.alert("Sukses", "Data kandang berhasil dihapus");
+                fetchData();
               } else {
-                const error = await res.text();
-                Alert.alert("Error", error || "Gagal menghapus data");
+                Alert.alert("Error", responseData.message || "Gagal menghapus data");
               }
             } catch (error) {
-              console.error(error);
-              Alert.alert("Error", "Koneksi ke server gagal");
+              console.error("Delete error:", error);
+              Alert.alert("Error", `Gagal menghubungi server: ${error}`);
             }
           },
         },
@@ -141,47 +169,69 @@ export default function formTambahPakan() {
     );
   };
 
-
-  const getWarningItems = () => {
-    return data.filter((item) => item.jumlah_stok < 30);
+  const getPercentage = (current: number, max: number) => {
+    return Math.round((current / max) * 100);
   };
 
-  const renderWarningItem = (item: Pakan) => (
-    <View style={styles.warningCard} key={item.id_pakan}>
-      <View style={styles.warningIcon}>
-        <Text style={styles.warningIconText}>⚠️</Text>
-      </View>
+  const getOvercrowdedItems = () => {
+    return data.filter((item) => {
+      const percentage = getPercentage(item.jumlah_hewan, item.kapasitas);
+      return percentage >= 90;
+    });
+  };
+
+  const renderWarningItem = (item: Kandang) => (
+    <View style={styles.warningCard} key={item.id_kandang}>
+      <Text style={styles.warningIcon}>⚠️</Text>
       <Text style={styles.warningText}>
-        {item.nm_pakan} Tersisa {item.jumlah_stok} Kg!
+        {item.nm_kandang} penuh ({item.jumlah_hewan}/{item.kapasitas} {item.jenis_hewan})!
       </Text>
     </View>
   );
 
-  const renderPakanItem = ({ item }: { item: Pakan }) => {
-    const isLowStock = item.jumlah_stok < 30;
+  const renderKandangItem = ({ item }: { item: Kandang }) => {
+    const percentage = getPercentage(item.jumlah_hewan, item.kapasitas);
+    const isOvercrowded = percentage >= 90;
+    const isAlmostFull = percentage >= 75 && percentage < 90;
+
     return (
-      <View style={styles.pakanCard}>
-        <View style={styles.pakanHeader}>
-          <View style={styles.pakanInfo}>
-            <Text style={styles.pakanName}>{item.nm_pakan}</Text>
-            <Text style={styles.pakanDate}>
-              Terakhir Diisi: {new Date(item.tgl_beli).toLocaleDateString("id-ID", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              })}
-            </Text>
+      <View style={styles.kandangCard}>
+        <View style={styles.kandangHeader}>
+          <View style={styles.kandangInfo}>
+            <Text style={styles.kandangName}>{item.nm_kandang}</Text>
+            <Text style={styles.kandangJenis}>🐾 {item.jenis_hewan}</Text>
+            {item.keterangan && (
+              <Text style={styles.kandangKeterangan}>📝 {item.keterangan}</Text>
+            )}
           </View>
-          <View style={styles.pakanStats}>
-            <Text style={[styles.pakanAmount, isLowStock && { color: "#FF6B6B" }]}>
-              {item.jumlah_stok} Kg
+          <View style={styles.kandangStats}>
+            <Text style={styles.kandangAmount}>
+              {item.jumlah_hewan}/{item.kapasitas}
             </Text>
+            <Text style={styles.kandangPercentage}>{percentage}% Terisi</Text>
           </View>
         </View>
+
+        <View style={styles.progressBarContainer}>
+          <View
+            style={[
+              styles.progressBar,
+              {
+                width: `${percentage}%`,
+                backgroundColor: isOvercrowded
+                  ? "#FF6B6B"
+                  : isAlmostFull
+                    ? "#FFA500"
+                    : "#1E3A3A",
+              },
+            ]}
+          />
+        </View>
+
         <View style={styles.actionButtons}>
           <TouchableOpacity
             style={styles.deleteBtn}
-            onPress={() => handleDelete(item.id_pakan)} 
+            onPress={() => handleDelete(item.id_kandang)}
           >
             <Text style={styles.btnIcon}>🗑️</Text>
             <Text style={styles.btnText}>Hapus</Text>
@@ -199,28 +249,56 @@ export default function formTambahPakan() {
     );
   };
 
-  const warningItems = getWarningItems();
+  const overcrowdedItems = getOvercrowdedItems();
 
   return (
     <View style={styles.mainContainer}>
       <MenuSidebar activeMenu="Ternak" gmail={gmail} nama={nama} />
+
       <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Inventori Pakan Ternak</Text>
+        <View style={styles.topNavContainer}>
           <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => {
-              resetForm(); // Reset dulu sebelum buka modal tambah
-              setModalVisible(true);
-            }}
+            style={styles.navButton}
+            onPress={() =>
+              router.push({
+                pathname: "/(tabs)/ternak/hewan" as any,
+                params: { gmail, nama },
+              })
+            }
           >
-            <Text style={styles.addButtonText}>+ Tambah Stok</Text>
+            <Text style={styles.navText}>Hewan</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.navButton, styles.navButtonActive]}>
+            <Text style={[styles.navText, styles.navTextActive]}>Kandang</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.navButton}
+            onPress={() =>
+              router.push({
+                pathname: "/(tabs)/ternak/DataTernak" as any,
+                params: { gmail, nama },
+              })
+            }
+          >
+            <Text style={styles.navText}>Inventori Pakan</Text>
           </TouchableOpacity>
         </View>
 
-        {warningItems.length > 0 && (
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Manajemen Kandang</Text>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setModalVisible(true)}
+          >
+            <Text style={styles.addButtonText}>+ Tambah Kandang</Text>
+          </TouchableOpacity>
+        </View>
+
+        {overcrowdedItems.length > 0 && (
           <View style={styles.warningSection}>
-            {warningItems.map((item) => renderWarningItem(item))}
+            {overcrowdedItems.map((item) => renderWarningItem(item))}
           </View>
         )}
 
@@ -229,13 +307,13 @@ export default function formTambahPakan() {
         ) : (
           <FlatList
             data={data}
-            keyExtractor={(item) => item.id_pakan.toString()}
-            renderItem={renderPakanItem}
+            keyExtractor={(item) => item.id_kandang.toString()}
+            renderItem={renderKandangItem}
             contentContainerStyle={styles.listContainer}
           />
         )}
 
-        {/* MODAL */}
+        {/* MODAL FORM */}
         <Modal
           animationType="slide"
           transparent={true}
@@ -245,79 +323,45 @@ export default function formTambahPakan() {
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>
-                {selectedId ? "Edit Data Pakan" : "Tambah Data Pakan"}
+                {selectedId ? "Edit Data Kandang" : "Tambah Data Kandang"}
               </Text>
 
-              <TextInput
-                placeholder="Nama Pakan"
-                style={styles.input}
-                value={nmPakan}
-                onChangeText={setNmPakan}
-              />
-
-              <TextInput
-                placeholder="Jumlah Stok (Kg)"
-                style={styles.input}
-                value={jumlahStok}
-                keyboardType="numeric"
-                onChangeText={(text) => {
-                  // Hanya izinkan angka
-                  const numericValue = text.replace(/[^0-9]/g, '');
-                  setJumlahStok(numericValue);
-                }}
-                maxLength={10}
-              />
-              <TextInput
-                placeholder="Max Stok (Kg)"
-                style={styles.input}
-                value={stokMaksimal}
-                keyboardType="numeric"
-                onChangeText={(text) => {
-                  // Hanya izinkan angka
-                  const numericValue = text.replace(/[^0-9]/g, '');
-                  setStokMaksimal(numericValue);
-                }}
-                maxLength={10}
-              
-              />
-
-              {/* TANGGAL: DATE PICKER */}
-              <View style={{ marginBottom: 12 }}>
-                <Text style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>
-                  Tanggal Beli
-                </Text>
-                <TouchableOpacity
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <TextInput
+                  placeholder="Nama Kandang"
                   style={styles.input}
-                  onPress={() => setShowDatePicker(true)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={{ color: tglBeli ? "#000" : "#999", fontSize: 14 }}>
-                    {tglBeli ? new Date(tglBeli).toLocaleDateString("id-ID", {
-                      day: "2-digit",
-                      month: "long",
-                      year: "numeric",
-                    }) : "Pilih tanggal..."}
-                  </Text>
-                </TouchableOpacity>
-
-                {showDatePicker && (
-                  <DateTimePicker
-                    value={tglBeli ? new Date(tglBeli) : new Date()}
-                    mode="date"
-                    display={Platform.OS === "ios" ? "spinner" : "default"}
-                    onChange={(event, selectedDate) => {
-                      setShowDatePicker(Platform.OS === "ios");
-                      if (selectedDate) {
-                        const year = selectedDate.getFullYear();
-                        const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
-                        const day = String(selectedDate.getDate()).padStart(2, "0");
-                        const formatted = `${year}-${month}-${day}`;
-                        setTglBeli(formatted);
-                      }
-                    }}
-                  />
-                )}
-              </View>
+                  value={nmKandang}
+                  onChangeText={setNmKandang}
+                />
+                <TextInput
+                  placeholder="Kapasitas Maksimal"
+                  style={styles.input}
+                  value={kapasitas}
+                  keyboardType="numeric"
+                  onChangeText={setKapasitas}
+                />
+                <TextInput
+                  placeholder="Jumlah Hewan"
+                  style={styles.input}
+                  value={jumlahHewan}
+                  keyboardType="numeric"
+                  onChangeText={setJumlahHewan}
+                />
+                <TextInput
+                  placeholder="Jenis Hewan"
+                  style={styles.input}
+                  value={jenisHewan}
+                  onChangeText={setJenisHewan}
+                />
+                <TextInput
+                  placeholder="Keterangan"
+                  style={[styles.input, styles.textArea]}
+                  value={keterangan}
+                  onChangeText={setKeterangan}
+                  multiline
+                  numberOfLines={3}
+                />
+              </ScrollView>
 
               <View style={styles.modalButtons}>
                 <TouchableOpacity
@@ -326,6 +370,7 @@ export default function formTambahPakan() {
                 >
                   <Text style={styles.cancelBtnText}>Batal</Text>
                 </TouchableOpacity>
+
                 <TouchableOpacity
                   style={[styles.modalBtn, styles.saveBtn]}
                   onPress={handleSave}
@@ -350,16 +395,48 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#E8F4F8",
+    padding: 20,
+  },
+  topNavContainer: {
+    flexDirection: "row",
+    backgroundColor: "#1E3A3A",
+    borderRadius: 35,
+    padding: 5,
+    marginBottom: 25,
+    justifyContent: "space-between",
+  },
+  navButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 2,
+  },
+  loader: {
+    marginTop: 50,
+    alignSelf: "center",
+  },
+  navButtonActive: {
+    backgroundColor: "#4A3A2A",
+  },
+  navText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  navTextActive: {
+    fontWeight: "600",
   },
   header: {
     backgroundColor: "white",
     padding: 20,
-    paddingTop: 40,
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
+    borderRadius: 15,
+    marginBottom: 15,
+    elevation: 3,
   },
   headerTitle: {
     fontSize: 20,
@@ -375,105 +452,106 @@ const styles = StyleSheet.create({
   addButtonText: {
     color: "white",
     fontWeight: "600",
-    fontSize: 14,
   },
   warningSection: {
-    padding: 15,
+    marginBottom: 15,
   },
   warningCard: {
+    flexDirection: "row",
     backgroundColor: "#FFF4E6",
+    padding: 12,
     borderLeftWidth: 4,
     borderLeftColor: "#FF9800",
     borderRadius: 8,
-    padding: 12,
-    flexDirection: "row",
-    alignItems: "center",
     marginBottom: 10,
+    alignItems: "center",
   },
   warningIcon: {
+    fontSize: 20,
     marginRight: 10,
   },
-  warningIconText: {
-    fontSize: 20,
-  },
   warningText: {
-    color: "#E65100",
     fontSize: 14,
-    fontWeight: "500",
+    color: "#E65100",
   },
   listContainer: {
-    padding: 15,
+    paddingBottom: 15,
   },
-  pakanCard: {
+  kandangCard: {
     backgroundColor: "white",
     borderRadius: 12,
     padding: 16,
     marginBottom: 15,
     elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
-  pakanHeader: {
+  kandangHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 12,
   },
-  pakanInfo: {
+  kandangInfo: {
     flex: 1,
   },
-  pakanName: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#1E3A3A",
-    marginBottom: 4,
-  },
-  pakanDate: {
-    fontSize: 12,
-    color: "#757575",
-  },
-  pakanStats: {
-    alignItems: "flex-end",
-  },
-  pakanAmount: {
+  kandangName: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#1E3A3A",
+  },
+  kandangJenis: {
+    fontSize: 14,
+    color: "#666",
+  },
+  kandangKeterangan: {
+    fontSize: 12,
+    color: "#999",
+    fontStyle: "italic",
+  },
+  kandangStats: {
+    alignItems: "flex-end",
+  },
+  kandangAmount: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  kandangPercentage: {
+    fontSize: 13,
+    color: "#666",
+  },
+  progressBarContainer: {
+    height: 8,
+    backgroundColor: "#E0E0E0",
+    borderRadius: 4,
+    overflow: "hidden",
+    marginBottom: 12,
+  },
+  progressBar: {
+    height: "100%",
+    borderRadius: 4,
   },
   actionButtons: {
     flexDirection: "row",
     justifyContent: "flex-end",
     gap: 10,
-    marginTop: 12,
   },
   deleteBtn: {
+    backgroundColor: "#1E3A3A",
     flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FF6B6B",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    padding: 8,
     borderRadius: 6,
   },
   editBtn: {
-    flexDirection: "row",
-    alignItems: "center",
     backgroundColor: "#1E3A3A",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    flexDirection: "row",
+    padding: 8,
     borderRadius: 6,
   },
   btnIcon: {
     marginRight: 4,
-    fontSize: 14,
   },
   btnText: {
     color: "white",
     fontSize: 13,
     fontWeight: "600",
-  },
-  loader: {
-    marginTop: 50,
   },
   modalOverlay: {
     flex: 1,
@@ -486,23 +564,25 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 24,
     width: "90%",
-    maxWidth: 400,
+    maxHeight: "80%",
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#1E3A3A",
-    marginBottom: 20,
     textAlign: "center",
+    marginBottom: 20,
+    color: "#1E3A3A",
   },
   input: {
     borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 8,
+    borderColor: "#DDD",
     padding: 12,
-    fontSize: 14,
+    borderRadius: 8,
     marginBottom: 12,
-    backgroundColor: "white",
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: "top",
   },
   modalButtons: {
     flexDirection: "row",
@@ -512,23 +592,21 @@ const styles = StyleSheet.create({
   modalBtn: {
     flex: 1,
     padding: 14,
-    borderRadius: 8,
     alignItems: "center",
+    borderRadius: 8,
   },
   cancelBtn: {
     backgroundColor: "#F5F5F5",
   },
-  cancelBtnText: {
-    color: "#757575",
-    fontWeight: "600",
-    fontSize: 15,
-  },
   saveBtn: {
     backgroundColor: "#1E3A3A",
+  },
+  cancelBtnText: {
+    color: "#555",
+    fontWeight: "600",
   },
   saveBtnText: {
     color: "white",
     fontWeight: "600",
-    fontSize: 15,
   },
 });

@@ -1,31 +1,37 @@
-import { AlexBrush_400Regular, useFonts } from "@expo-google-fonts/alex-brush";
+import {
+    AlexBrush_400Regular,
+    useFonts
+} from "@expo-google-fonts/alex-brush";
 import {
     Poppins_400Regular,
-    Poppins_600SemiBold,
+    Poppins_600SemiBold
 } from "@expo-google-fonts/poppins";
 import AppLoading from "expo-app-loading";
 import { useRouter } from "expo-router";
-import {
-    BarChart3,
-    Briefcase,
-    CheckSquare,
-    Cpu,
-    Dog,
-    LayoutGrid,
-    Leaf,
-    LogOut,
-    Truck,
-    User,
-} from "lucide-react-native";
 import React from "react";
 import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    View
+    View,
+    Dimensions
 } from "react-native";
+import {
+    LayoutGrid,
+    CheckSquare,
+    Briefcase,
+    User,
+    LogOut
+} from "lucide-react-native";
 import { API_URLS } from "../api/apiConfig";
 
+const { width } = Dimensions.get("window");
+const sidebarWidth = width < 380 ? 140 : 200;
+const fontSmall = width < 380;
+
+// ==============================
+// ✅ Tambahkan props interface
+// ==============================
 interface MenuSidebarProps {
     activeMenu: string;
     gmail: string;
@@ -41,11 +47,12 @@ export default function MenuSidebar({ activeMenu, gmail, nama }: MenuSidebarProp
         Poppins_600SemiBold,
     });
 
-    if (!fontsLoaded) {
-        return <AppLoading />;
-    }
+    if (!fontsLoaded) return <AppLoading />;
 
-    const menus = [
+    // ==============================
+    // MENU LIST FULLY TYPED
+    // ==============================
+    const menus: { label: string; icon: any; path: string }[] = [
         { label: "Dashboard", icon: LayoutGrid, path: "/dashboard" },
         { label: "Selesai", icon: CheckSquare, path: "/(tabs)/tanaman/tanamanI" },
         { label: "Pending", icon: Briefcase, path: "/(tabs)/ternak/DataTernak" },
@@ -57,7 +64,7 @@ export default function MenuSidebar({ activeMenu, gmail, nama }: MenuSidebarProp
             const res = await fetch(API_URLS.LOGOUT, { method: "GET" });
             if (res.ok) {
                 alert("Logout Berhasil!");
-                router.push("/");
+                router.push("/") as never;
             } else alert("Gagal Logout");
         } catch {
             alert("Server tidak merespons");
@@ -66,7 +73,6 @@ export default function MenuSidebar({ activeMenu, gmail, nama }: MenuSidebarProp
 
     return (
         <View style={styles.sidebar}>
-            {/* Logo Section */}
             <View style={styles.logoContainer}>
                 <Text style={[styles.logo, { fontFamily: "AlexBrush_400Regular" }]}>
                     Agrotech
@@ -74,16 +80,12 @@ export default function MenuSidebar({ activeMenu, gmail, nama }: MenuSidebarProp
                 <View style={styles.divider} />
             </View>
 
-            {/* Menu List */}
             <View style={styles.menuList}>
                 {menus.map((item) => (
                     <TouchableOpacity
                         key={item.label}
                         onPress={() =>
-                            router.push({
-                                pathname: item.path as any,
-                                params: { gmail, nama },
-                            })
+                            router.push(item.path as any) // ← SOLUSI ERROR TS
                         }
                         style={[
                             styles.menuItem,
@@ -91,9 +93,8 @@ export default function MenuSidebar({ activeMenu, gmail, nama }: MenuSidebarProp
                         ]}
                     >
                         <item.icon
-                            size={22}
+                            size={fontSmall ? 18 : 22}
                             color={activeMenu === item.label ? "#fff" : "#d4c4b0"}
-                            strokeWidth={2}
                         />
                         <Text
                             style={[
@@ -113,12 +114,9 @@ export default function MenuSidebar({ activeMenu, gmail, nama }: MenuSidebarProp
                 ))}
             </View>
 
-            {/* Logout Button */}
             <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-                <LogOut size={20} color="#d4c4b0" strokeWidth={2} />
-                <Text style={[styles.logoutText, { fontFamily: "Poppins_400Regular" }]}>
-                    Logout
-                </Text>
+                <LogOut size={fontSmall ? 16 : 20} color="#d4c4b0" />
+                <Text style={styles.logoutText}>Logout</Text>
             </TouchableOpacity>
         </View>
     );
@@ -126,34 +124,24 @@ export default function MenuSidebar({ activeMenu, gmail, nama }: MenuSidebarProp
 
 const styles = StyleSheet.create({
     sidebar: {
-        width: 200,
+        width: sidebarWidth,
         height: "100%",
         backgroundColor: "#D01C1C",
         paddingTop: 30,
         paddingBottom: 30,
-        paddingHorizontal: 18,
+        paddingHorizontal: 14,
         justifyContent: "space-between",
         borderRadius: 20,
         margin: 10,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 8,
     },
     logoContainer: {
         marginBottom: 24,
     },
     logo: {
-        fontSize: 40,
+        fontSize: width < 380 ? 28 : 40,
         color: "#fff",
-        fontStyle: "italic",
-        marginBottom: 16,
         textAlign: "center",
-        letterSpacing: 1.5,
-        textShadowColor: "rgba(0, 0, 0, 0.3)",
-        textShadowOffset: { width: 2, height: 2 },
-        textShadowRadius: 4,
+        marginBottom: 8,
     },
     divider: {
         height: 2,
@@ -167,35 +155,26 @@ const styles = StyleSheet.create({
     menuItem: {
         flexDirection: "row",
         alignItems: "center",
-        paddingVertical: 12,
-        paddingHorizontal: 14,
+        paddingVertical: width < 380 ? 8 : 12,
+        paddingHorizontal: 10,
         marginBottom: 5,
         borderRadius: 10,
     },
     menuItemActive: {
         backgroundColor: "#E8BC6A",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 4,
     },
     menuText: {
-        fontSize: 14,
-        marginLeft: 10,
-        letterSpacing: 0.2,
+        fontSize: width < 380 ? 12 : 14,
+        marginLeft: 8,
     },
     logoutButton: {
         flexDirection: "row",
         alignItems: "center",
-        paddingVertical: 12,
-        paddingHorizontal: 14,
-        borderRadius: 10,
+        paddingVertical: 10,
     },
     logoutText: {
         color: "#d4c4b0",
-        fontSize: 14,
+        fontSize: width < 380 ? 12 : 14,
         marginLeft: 10,
-        letterSpacing: 0.2,
     },
 });
