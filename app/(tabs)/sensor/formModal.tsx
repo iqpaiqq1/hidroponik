@@ -17,7 +17,7 @@ type FormDataType = {
     id_tanaman?: number | null;
     id_kandang?: number | null;
     lokasi: string;
-    populasi: string | number;
+    populasi: string;
     suhu: number;
     kelembapan: number;
     produktivitas: number;
@@ -234,8 +234,8 @@ export default function FormModal({
         // Konversi populasi ke number
         const dataToSend = {
             ...formData,
-            populasi: parseInt(formData.populasi) || 0,
-        
+            populasi: formData.populasi,
+
             id_tanaman: activeTab === "tanaman" ? formData.id_tanaman : null,
             id_kandang: activeTab === "ternak" ? formData.id_kandang : null,
         };

@@ -186,7 +186,7 @@ export default function KandangScreen() {
                 <Text style={styles.warningIconText}>⚠️</Text>
             </View>
             <Text style={styles.warningText}>
-                {item.nm_kandang} hampir penuh ({item.jumlah_hewan}/{item.kapasitas} {item.jenis_hewan})!
+                {item.nm_kandang} penuh ({item.jumlah_hewan}/{item.kapasitas} {item.jenis_hewan})!
             </Text>
         </View>
     );

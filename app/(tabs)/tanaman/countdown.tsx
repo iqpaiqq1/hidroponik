@@ -1,9 +1,10 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { Clock } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import MenuSidebar from "../sidebar";
 import { API_URLS } from "../../api/apiConfig"
+
 interface Tanaman {
     id_tanaman: number;
     nm_tanaman: string;
@@ -24,12 +25,15 @@ interface CountdownData {
     statusColor: string;
 }
 
-
-
 export default function CountdownScreen() {
     const { gmail, nama } = useLocalSearchParams();
     const [countdownList, setCountdownList] = useState<CountdownData[]>([]);
     const [loading, setLoading] = useState(true);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [selectedTanaman, setSelectedTanaman] = useState<CountdownData | null>(null);
+    const [kualitas, setKualitas] = useState("");
+    const [jumlahPanen, setJumlahPanen] = useState("");
+    const [processingPanen, setProcessingPanen] = useState(false);
 
     const calculateCountdown = (tglTanam: string, lamaPanen: string): CountdownData | null => {
         try {
@@ -56,16 +60,16 @@ export default function CountdownScreen() {
 
             if (daysRemaining > 3 && percentage < 30) {
                 statusText = "Baru Ditanam";
-                statusColor = "#2196F3"; 
+                statusColor = "#2196F3";
             } else if (daysRemaining <= 3 && daysRemaining > 0) {
                 statusText = "Segera Panen";
-                statusColor = "#FF9800"; // oranye
+                statusColor = "#FF9800";
             } else if (daysRemaining === 0) {
                 statusText = "Sudah Waktunya Panen";
-                statusColor = "#4CAF50"; // hijau
+                statusColor = "#4CAF50";
             } else if (daysRemaining < 0) {
                 statusText = "Terlambat Panen";
-                statusColor = "#F44336"; // merah
+                statusColor = "#F44336";
                 percentage = 100;
             }
 
@@ -82,7 +86,6 @@ export default function CountdownScreen() {
             return null;
         }
     };
-
 
     const fetchData = async () => {
         try {
@@ -102,21 +105,85 @@ export default function CountdownScreen() {
 
             setCountdownList(countdowns);
         } catch (error) {
-            alert("Gagal memuat data countdown");
+            Alert.alert("Error", "Gagal memuat data countdown");
         } finally {
             setLoading(false);
         }
     };
 
+    const handlePanenPress = (item: CountdownData) => {
+        // Hanya bisa dipanen jika sudah waktunya atau terlambat
+        if (item.daysRemaining <= 0) {
+            setSelectedTanaman(item);
+            setJumlahPanen(item.tanaman.jumlah.toString());
+            setModalVisible(true);
+        }
+    };
+
+    const prosessPanen = async () => {
+        if (!selectedTanaman) return;
+
+        if (!kualitas.trim()) {
+            Alert.alert("Error", "Mohon isi kualitas panen");
+            return;
+        }
+
+        if (!jumlahPanen || parseInt(jumlahPanen) <= 0) {
+            Alert.alert("Error", "Jumlah panen harus lebih dari 0");
+            return;
+        }
+
+        setProcessingPanen(true);
+
+        try {
+            const response = await fetch(
+                `${API_URLS.TANAMAN}/${selectedTanaman.tanaman.id_tanaman}/panen`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        kualitas: kualitas,
+                        jumlah_panen: parseInt(jumlahPanen)
+                    })
+                }
+            );
+
+            const result = await response.json();
+
+            if (response.ok) {
+                Alert.alert("Sukses", "Tanaman berhasil dipanen dan dipindahkan ke data panen");
+                setModalVisible(false);
+                setKualitas("");
+                setJumlahPanen("");
+                setSelectedTanaman(null);
+                // Refresh data
+                await fetchData();
+            } else {
+                Alert.alert("Error", result.message || "Gagal memproses panen");
+            }
+        } catch (error) {
+            Alert.alert("Error", "Terjadi kesalahan saat memproses panen");
+            console.error(error);
+        } finally {
+            setProcessingPanen(false);
+        }
+    };
+
     useEffect(() => {
         fetchData();
-        const interval = setInterval(fetchData, 60000); // Update setiap menit
+        const interval = setInterval(fetchData, 60000);
         return () => clearInterval(interval);
     }, []);
 
     const formatDate = (date: Date) => {
         const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
         return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+    };
+
+    const isHarvestable = (item: CountdownData) => {
+        return item.daysRemaining <= 0;
     };
 
     return (
@@ -153,26 +220,6 @@ export default function CountdownScreen() {
                         })}>
                         <Text style={styles.navText}>Statistik{'\n'}Panen</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.navButton}
-                                            onPress={() => router.push({
-                                                pathname: "/(tabs)/tanaman/aktif",
-                                                params: {
-                                                    gmail: Array.isArray(gmail) ? gmail[0] : gmail,
-                                                    nama: Array.isArray(nama) ? nama[0] : nama,
-                                                },
-                                            })}>
-                                            <Text style={styles.navText}>Daftar{'\n'}Tanaman Aktif</Text>
-                                        </TouchableOpacity>
-                   <TouchableOpacity style={styles.navButton}
-                                           onPress={() => router.push({
-                                               pathname: "/(tabs)/tanaman/panen",
-                                               params: {
-                                                   gmail: Array.isArray(gmail) ? gmail[0] : gmail,
-                                                   nama: Array.isArray(nama) ? nama[0] : nama,
-                                               },
-                                           })}>
-                                           <Text style={styles.navText}>Jadwal{'\n'}Panen</Text>
-                                       </TouchableOpacity>
                 </View>
 
                 {loading ? (
@@ -180,7 +227,7 @@ export default function CountdownScreen() {
                 ) : (
                     <ScrollView style={styles.scrollView}>
                         <View style={styles.cardsContainer}>
-                            {countdownList.map((item, index) => (
+                            {countdownList.map((item) => (
                                 <View key={item.tanaman.id_tanaman} style={styles.card}>
                                     <View style={styles.cardHeader}>
                                         <View style={styles.plantInfo}>
@@ -193,7 +240,13 @@ export default function CountdownScreen() {
                                             </View>
                                         </View>
                                         <TouchableOpacity
-                                            style={[styles.statusBadge, { backgroundColor: item.statusColor }]}
+                                            style={[
+                                                styles.statusBadge,
+                                                { backgroundColor: item.statusColor },
+                                                isHarvestable(item) && styles.statusBadgeClickable
+                                            ]}
+                                            onPress={() => handlePanenPress(item)}
+                                            disabled={!isHarvestable(item)}
                                         >
                                             <Text style={styles.statusText}>{item.statusText}</Text>
                                         </TouchableOpacity>
@@ -223,12 +276,93 @@ export default function CountdownScreen() {
                                     <Text style={styles.targetDate}>
                                         Target Panen: {formatDate(item.targetDate)}
                                     </Text>
+
+                                    {isHarvestable(item) && (
+                                        <TouchableOpacity
+                                            style={styles.panenButton}
+                                            onPress={() => handlePanenPress(item)}
+                                        >
+                                            <Text style={styles.panenButtonText}>🌾 Panen Sekarang</Text>
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
                             ))}
                         </View>
                     </ScrollView>
                 )}
             </View>
+
+            {/* Modal Panen */}
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={modalVisible}
+                onRequestClose={() => setModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>Konfirmasi Panen</Text>
+
+                        {selectedTanaman && (
+                            <View style={styles.modalInfo}>
+                                <Text style={styles.modalInfoText}>
+                                    Tanaman: {selectedTanaman.tanaman.nm_tanaman}
+                                </Text>
+                                <Text style={styles.modalInfoText}>
+                                    Varietas: {selectedTanaman.tanaman.varietas}
+                                </Text>
+                            </View>
+                        )}
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.inputLabel}>Jumlah Panen:</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={jumlahPanen}
+                                onChangeText={setJumlahPanen}
+                                keyboardType="numeric"
+                                placeholder="Masukkan jumlah panen"
+                            />
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.inputLabel}>Kualitas:</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={kualitas}
+                                onChangeText={setKualitas}
+                                placeholder="Contoh: Baik, Sangat Baik, Sedang"
+                            />
+                        </View>
+
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity
+                                style={[styles.modalButton, styles.cancelButton]}
+                                onPress={() => {
+                                    setModalVisible(false);
+                                    setKualitas("");
+                                    setJumlahPanen("");
+                                }}
+                                disabled={processingPanen}
+                            >
+                                <Text style={styles.cancelButtonText}>Batal</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.modalButton, styles.confirmButton]}
+                                onPress={prosessPanen}
+                                disabled={processingPanen}
+                            >
+                                {processingPanen ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <Text style={styles.confirmButtonText}>Konfirmasi Panen</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -334,6 +468,13 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
         borderRadius: 15,
     },
+    statusBadgeClickable: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
+        elevation: 4,
+    },
     statusText: {
         color: "#fff",
         fontSize: 11,
@@ -382,5 +523,101 @@ const styles = StyleSheet.create({
     targetDate: {
         fontSize: 13,
         color: "#666",
+        marginBottom: 10,
+    },
+    panenButton: {
+        backgroundColor: "#4CAF50",
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 10,
+        alignItems: "center",
+        marginTop: 10,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
+        elevation: 4,
+    },
+    panenButtonText: {
+        color: "#fff",
+        fontSize: 14,
+        fontWeight: "700",
+    },
+    // Modal Styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    modalContent: {
+        backgroundColor: "#fff",
+        borderRadius: 20,
+        padding: 25,
+        width: "90%",
+        maxWidth: 400,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: "700",
+        color: "#333",
+        marginBottom: 20,
+        textAlign: "center",
+    },
+    modalInfo: {
+        backgroundColor: "#F5F5F5",
+        padding: 15,
+        borderRadius: 10,
+        marginBottom: 20,
+    },
+    modalInfoText: {
+        fontSize: 14,
+        color: "#666",
+        marginBottom: 5,
+    },
+    inputGroup: {
+        marginBottom: 15,
+    },
+    inputLabel: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#333",
+        marginBottom: 8,
+    },
+    input: {
+        borderWidth: 1,
+        borderColor: "#ddd",
+        borderRadius: 10,
+        padding: 12,
+        fontSize: 14,
+        backgroundColor: "#F9F9F9",
+    },
+    modalButtons: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginTop: 20,
+        gap: 10,
+    },
+    modalButton: {
+        flex: 1,
+        paddingVertical: 14,
+        borderRadius: 10,
+        alignItems: "center",
+    },
+    cancelButton: {
+        backgroundColor: "#E0E0E0",
+    },
+    cancelButtonText: {
+        color: "#666",
+        fontSize: 14,
+        fontWeight: "600",
+    },
+    confirmButton: {
+        backgroundColor: "#4CAF50",
+    },
+    confirmButtonText: {
+        color: "#fff",
+        fontSize: 14,
+        fontWeight: "700",
     },
 });

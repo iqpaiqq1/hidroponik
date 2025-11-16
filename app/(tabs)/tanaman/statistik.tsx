@@ -145,26 +145,7 @@ export default function StatistikScreen() {
                     <TouchableOpacity style={[styles.navButton, styles.navButtonActive]}>
                         <Text style={[styles.navText, styles.navTextActive]}>Statistik{'\n'}Panen</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.navButton}
-                                            onPress={() => router.push({
-                                                pathname: "/(tabs)/tanaman/aktif",
-                                                params: {
-                                                    gmail: Array.isArray(gmail) ? gmail[0] : gmail,
-                                                    nama: Array.isArray(nama) ? nama[0] : nama,
-                                                },
-                                            })}>
-                                            <Text style={styles.navText}>Daftar{'\n'}Tanaman Aktif</Text>
-                                        </TouchableOpacity>
-                    <TouchableOpacity style={styles.navButton}
-                                            onPress={() => router.push({
-                                                pathname: "/(tabs)/tanaman/panen",
-                                                params: {
-                                                    gmail: Array.isArray(gmail) ? gmail[0] : gmail,
-                                                    nama: Array.isArray(nama) ? nama[0] : nama,
-                                                },
-                                            })}>
-                                            <Text style={styles.navText}>Jadwal{'\n'}Panen</Text>
-                                        </TouchableOpacity>
+                    
                 </View>
 
                 {loading ? (
