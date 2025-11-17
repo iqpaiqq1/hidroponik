@@ -14,6 +14,8 @@ import {
 } from "react-native";
 import MenuSidebar from "../sidebar";
 import { API_URLS } from "../../api/apiConfig";
+import { Picker } from "@react-native-picker/picker";
+
 type Kandang = {
     id_kandang: number;
     nm_kandang: string;
@@ -23,7 +25,19 @@ type Kandang = {
     keterangan: string;
 };
 
-
+const JENIS_HEWAN_OPTIONS = [
+    "Ayam",
+    "Bebek",
+    "Angsa",
+    "Kambing",
+    "Domba", 
+    "Sapi",
+    "Kerbau",
+    "Babi",
+    "Kelinci",
+    "Puyuh",
+    "Lainnya"
+];
 
 export default function KandangScreen() {
     const params = useLocalSearchParams();
@@ -39,6 +53,8 @@ export default function KandangScreen() {
     const [jenisHewan, setJenisHewan] = useState("");
     const [keterangan, setKeterangan] = useState("");
     const [selectedId, setSelectedId] = useState<number | null>(null);
+    const [saving, setSaving] = useState(false);
+    const [deletingId, setDeletingId] = useState<number | null>(null); // TAMBAHAN: State untuk tracking delete
 
     const fetchData = async () => {
         setLoading(true);
@@ -47,13 +63,18 @@ export default function KandangScreen() {
             const res = await fetch(API_URLS.KANDANG);
             console.log("Fetch status:", res.status);
 
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
+
             const json = await res.json();
             console.log("Data received:", json);
 
-            setData(json);
+            const kandangData = json.data || json;
+            setData(Array.isArray(kandangData) ? kandangData : []);
         } catch (error) {
             console.error("Fetch error:", error);
-            Alert.alert("Error", "Gagal mengambil data kandang: " + error);
+            Alert.alert("Error", "Gagal mengambil data kandang");
         } finally {
             setLoading(false);
         }
@@ -64,23 +85,36 @@ export default function KandangScreen() {
     }, []);
 
     const handleSave = async () => {
-        if (!nmKandang || !kapasitas || !jumlahHewan || !jenisHewan) {
-            return Alert.alert("Error", "Field wajib harus diisi");
+        if (!nmKandang.trim()) {
+            return Alert.alert("Error", "Nama kandang harus diisi");
+        }
+        if (!kapasitas || parseInt(kapasitas) <= 0) {
+            return Alert.alert("Error", "Kapasitas harus lebih dari 0");
+        }
+        if (!jumlahHewan || parseInt(jumlahHewan) < 0) {
+            return Alert.alert("Error", "Jumlah hewan tidak valid");
+        }
+        if (!jenisHewan) {
+            return Alert.alert("Error", "Jenis hewan harus dipilih");
+        }
+        if (parseInt(jumlahHewan) > parseInt(kapasitas)) {
+            return Alert.alert("Error", "Jumlah hewan tidak boleh melebihi kapasitas");
         }
 
         const payload = {
-            nm_kandang: nmKandang,
+            nm_kandang: nmKandang.trim(),
             kapasitas: parseInt(kapasitas),
             jumlah_hewan: parseInt(jumlahHewan),
             jenis_hewan: jenisHewan,
-            keterangan: keterangan || "",
+            keterangan: keterangan.trim() || "",
         };
 
         console.log("Payload:", payload);
+        setSaving(true);
 
         try {
             const method = selectedId ? "PUT" : "POST";
-            const url = selectedId ? `${API_URLS}/${selectedId}` : API_URLS.KANDANG;
+            const url = selectedId ? `${API_URLS.KANDANG}/${selectedId}` : API_URLS.KANDANG;
 
             console.log("Request:", method, url);
 
@@ -94,19 +128,21 @@ export default function KandangScreen() {
             });
 
             console.log("Response status:", res.status);
-            const json = await res.json();
-            console.log("Response data:", json);
+            const responseData = await res.json();
+            console.log("Response data:", responseData);
 
             if (res.ok) {
-                Alert.alert("Sukses", json.message || "Berhasil disimpan");
+                Alert.alert("Sukses", selectedId ? "Data berhasil diupdate" : "Data berhasil ditambahkan");
                 resetForm();
                 fetchData();
             } else {
-                Alert.alert("Error", json.message || "Gagal menyimpan data");
+                throw new Error(responseData.message || `Error ${res.status}`);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error detail:", error);
-            Alert.alert("Error", "Gagal menyimpan data: " + error);
+            Alert.alert("Error", error.message || "Gagal menyimpan data");
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -118,6 +154,7 @@ export default function KandangScreen() {
         setKeterangan("");
         setSelectedId(null);
         setModalVisible(false);
+        setSaving(false);
     };
 
     const handleEdit = (item: Kandang) => {
@@ -130,38 +167,114 @@ export default function KandangScreen() {
         setModalVisible(true);
     };
 
-    const handleDelete = async (id_kandang: number) => {
+    // PERBAIKAN: Fungsi delete yang sudah diperbaiki dengan lebih banyak logging
+    const handleDelete = (id_kandang: number) => {
+        console.log("=== HANDLE DELETE CALLED ===");
+        console.log("ID Kandang:", id_kandang);
+        console.log("API_URLS.KANDANG:", API_URLS.KANDANG);
+        
         Alert.alert(
             "Konfirmasi Hapus",
             "Apakah Anda yakin ingin menghapus kandang ini?",
             [
-                { text: "Batal", style: "cancel" },
+                { 
+                    text: "Batal", 
+                    style: "cancel",
+                    onPress: () => console.log("Delete cancelled")
+                },
                 {
                     text: "Hapus",
                     style: "destructive",
                     onPress: async () => {
+                        console.log("=== DELETE CONFIRMED ===");
+                        
                         try {
-                            console.log("Deleting:", `${API_URLS}/${id_kandang}`);
+                            setDeletingId(id_kandang);
+                            console.log("DeletingId set to:", id_kandang);
+                            
+                            const deleteUrl = `${API_URLS.KANDANG}/${id_kandang}`;
+                            console.log("Delete URL:", deleteUrl);
 
-                            const response = await fetch(`${API_URLS}/${id_kandang}`, {
+                            const response = await fetch(deleteUrl, {
                                 method: "DELETE",
+                                headers: {
+                                    "Accept": "application/json",
+                                    "Content-Type": "application/json"
+                                },
                             });
 
-                            console.log("Delete status:", response.status);
+                            console.log("Response received - Status:", response.status);
+                            console.log("Response OK:", response.ok);
+                            console.log("Response headers:", response.headers);
 
                             if (response.ok) {
-                                const data = await response.json();
-                                console.log("Delete response:", data);
-                                Alert.alert("Sukses", "Data kandang berhasil dihapus");
-                                fetchData();
+                                console.log("=== DELETE SUCCESS ===");
+                                
+                                let responseData = null;
+                                const contentType = response.headers.get("content-type");
+                                console.log("Content-Type:", contentType);
+                                
+                                try {
+                                    const text = await response.text();
+                                    console.log("Response text:", text);
+                                    
+                                    if (text) {
+                                        responseData = JSON.parse(text);
+                                        console.log("Parsed response:", responseData);
+                                    }
+                                } catch (parseError) {
+                                    console.log("Parse error (OK jika response kosong):", parseError);
+                                }
+                                
+                                Alert.alert(
+                                    "Sukses", 
+                                    responseData?.message || "Data kandang berhasil dihapus",
+                                    [
+                                        {
+                                            text: "OK",
+                                            onPress: () => console.log("Alert closed")
+                                        }
+                                    ]
+                                );
+                                
+                                console.log("Calling fetchData...");
+                                await fetchData();
+                                console.log("fetchData completed");
+                                
                             } else {
-                                const errorData = await response.json();
-                                console.log("Delete error:", errorData);
-                                Alert.alert("Error", `Gagal: ${errorData.message}`);
+                                console.log("=== DELETE FAILED ===");
+                                let errorMessage = `Gagal menghapus data. Status: ${response.status}`;
+                                
+                                try {
+                                    const errorText = await response.text();
+                                    console.log("Error response text:", errorText);
+                                    
+                                    if (errorText) {
+                                        const errorData = JSON.parse(errorText);
+                                        console.log("Parsed error:", errorData);
+                                        errorMessage = errorData.message || errorMessage;
+                                    }
+                                } catch (parseError) {
+                                    console.log("Could not parse error response:", parseError);
+                                }
+                                
+                                Alert.alert("Error", errorMessage);
                             }
-                        } catch (error) {
-                            console.error("Delete error:", error);
-                            Alert.alert("Error", "Terjadi kesalahan koneksi ke server: " + error);
+                        } catch (error: any) {
+                            console.log("=== DELETE EXCEPTION ===");
+                            console.error("Error type:", typeof error);
+                            console.error("Error name:", error.name);
+                            console.error("Error message:", error.message);
+                            console.error("Full error:", error);
+                            
+                            Alert.alert(
+                                "Error", 
+                                `Terjadi kesalahan: ${error.message || "Unknown error"}`
+                            );
+                        } finally {
+                            console.log("=== DELETE FINALLY ===");
+                            setDeletingId(null);
+                            console.log("DeletingId reset to null");
                         }
                     },
                 },
@@ -170,6 +283,7 @@ export default function KandangScreen() {
     };
 
     const getPercentage = (current: number, max: number) => {
+        if (max === 0) return 0;
         return Math.round((current / max) * 100);
     };
 
@@ -195,9 +309,10 @@ export default function KandangScreen() {
         const percentage = getPercentage(item.jumlah_hewan, item.kapasitas);
         const isOvercrowded = percentage >= 90;
         const isAlmostFull = percentage >= 75 && percentage < 90;
+        const isDeleting = deletingId === item.id_kandang; // TAMBAHAN: Check if this item is being deleted
 
         return (
-            <View style={styles.kandangCard}>
+            <View style={[styles.kandangCard, isDeleting && styles.cardDeleting]}>
                 <View style={styles.kandangHeader}>
                     <View style={styles.kandangInfo}>
                         <Text style={styles.kandangName}>{item.nm_kandang}</Text>
@@ -219,7 +334,7 @@ export default function KandangScreen() {
                         style={[
                             styles.progressBar,
                             {
-                                width: `${percentage}%`,
+                                width: `${Math.min(percentage, 100)}%`,
                                 backgroundColor: isOvercrowded
                                     ? "#FF6B6B"
                                     : isAlmostFull
@@ -232,18 +347,26 @@ export default function KandangScreen() {
 
                 <View style={styles.actionButtons}>
                     <TouchableOpacity
-                        style={styles.deleteBtn}
-                        onPress={() => handleDelete(item.id_kandang)}
-                    >
-                        <Text style={styles.btnIcon}>🗑️</Text>
-                        <Text style={styles.btnText}>Hapus</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={styles.editBtn}
+                        style={[styles.editBtn, isDeleting && styles.btnDisabled]}
                         onPress={() => handleEdit(item)}
+                        disabled={isDeleting}
                     >
                         <Text style={styles.btnIcon}>✏️</Text>
                         <Text style={styles.btnText}>Edit</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.deleteBtn, isDeleting && styles.btnDisabled]}
+                        onPress={() => handleDelete(item.id_kandang)}
+                        disabled={isDeleting}
+                    >
+                        {isDeleting ? (
+                            <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                            <>
+                                <Text style={styles.btnIcon}>🗑️</Text>
+                                <Text style={styles.btnText}>Hapus</Text>
+                            </>
+                        )}
                     </TouchableOpacity>
                 </View>
             </View>
@@ -303,12 +426,20 @@ export default function KandangScreen() {
                 {/* Data List */}
                 {loading ? (
                     <ActivityIndicator size="large" color="#1E3A3A" style={styles.loader} />
+                ) : data.length === 0 ? (
+                    <View style={styles.emptyState}>
+                        <Text style={styles.emptyStateText}>Belum ada data kandang</Text>
+                        <Text style={styles.emptyStateSubtext}>
+                            Tekan "Tambah Kandang" untuk menambahkan data pertama
+                        </Text>
+                    </View>
                 ) : (
                     <FlatList
                         data={data}
                         keyExtractor={(item) => item.id_kandang.toString()}
                         renderItem={renderKandangItem}
                         contentContainerStyle={styles.listContainer}
+                        showsVerticalScrollIndicator={false}
                     />
                 )}
 
@@ -325,35 +456,57 @@ export default function KandangScreen() {
                                 {selectedId ? "Edit Data Kandang" : "Tambah Data Kandang"}
                             </Text>
 
-                            <ScrollView showsVerticalScrollIndicator={false}>
+                            <ScrollView 
+                                showsVerticalScrollIndicator={false}
+                                style={styles.modalScrollView}
+                            >
+                                <Text style={styles.inputLabel}>Nama Kandang *</Text>
                                 <TextInput
-                                    placeholder="Nama Kandang"
+                                    placeholder="Masukkan nama kandang"
                                     style={styles.input}
                                     value={nmKandang}
                                     onChangeText={setNmKandang}
                                 />
+
+                                <Text style={styles.inputLabel}>Kapasitas Maksimal *</Text>
                                 <TextInput
-                                    placeholder="Kapasitas Maksimal"
+                                    placeholder="Masukkan kapasitas"
                                     style={styles.input}
                                     value={kapasitas}
                                     keyboardType="numeric"
                                     onChangeText={setKapasitas}
                                 />
+
+                                <Text style={styles.inputLabel}>Jumlah Hewan *</Text>
                                 <TextInput
-                                    placeholder="Jumlah Hewan"
+                                    placeholder="Masukkan jumlah hewan"
                                     style={styles.input}
                                     value={jumlahHewan}
                                     keyboardType="numeric"
                                     onChangeText={setJumlahHewan}
                                 />
+
+                                <Text style={styles.inputLabel}>Jenis Hewan *</Text>
+                                <View style={styles.pickerContainer}>
+                                    <Picker
+                                        selectedValue={jenisHewan}
+                                        onValueChange={(itemValue) => setJenisHewan(itemValue)}
+                                        style={styles.picker}
+                                    >
+                                        <Picker.Item label="Pilih Jenis Hewan" value="" />
+                                        {JENIS_HEWAN_OPTIONS.map((jenis, index) => (
+                                            <Picker.Item 
+                                                key={index} 
+                                                label={jenis} 
+                                                value={jenis} 
+                                            />
+                                        ))}
+                                    </Picker>
+                                </View>
+
+                                <Text style={styles.inputLabel}>Keterangan (opsional)</Text>
                                 <TextInput
-                                    placeholder="Jenis Hewan (misal: Ayam, Kambing, Sapi)"
-                                    style={styles.input}
-                                    value={jenisHewan}
-                                    onChangeText={setJenisHewan}
-                                />
-                                <TextInput
-                                    placeholder="Keterangan (opsional)"
+                                    placeholder="Masukkan keterangan tambahan"
                                     style={[styles.input, styles.textArea]}
                                     value={keterangan}
                                     onChangeText={setKeterangan}
@@ -366,14 +519,22 @@ export default function KandangScreen() {
                                 <TouchableOpacity
                                     style={[styles.modalBtn, styles.cancelBtn]}
                                     onPress={resetForm}
+                                    disabled={saving}
                                 >
                                     <Text style={styles.cancelBtnText}>Batal</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
-                                    style={[styles.modalBtn, styles.saveBtn]}
+                                    style={[styles.modalBtn, styles.saveBtn, saving && styles.btnDisabled]}
                                     onPress={handleSave}
+                                    disabled={saving}
                                 >
-                                    <Text style={styles.saveBtnText}>Simpan</Text>
+                                    {saving ? (
+                                        <ActivityIndicator size="small" color="#fff" />
+                                    ) : (
+                                        <Text style={styles.saveBtnText}>
+                                            {selectedId ? "Update" : "Simpan"}
+                                        </Text>
+                                    )}
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -493,6 +654,9 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
     },
+    cardDeleting: {
+        opacity: 0.6,
+    },
     kandangHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
@@ -549,10 +713,12 @@ const styles = StyleSheet.create({
     deleteBtn: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#1E3A3A",
+        backgroundColor: "#DC3545",
         paddingHorizontal: 12,
         paddingVertical: 8,
         borderRadius: 6,
+        minWidth: 80,
+        justifyContent: "center",
     },
     editBtn: {
         flexDirection: "row",
@@ -574,19 +740,38 @@ const styles = StyleSheet.create({
     loader: {
         marginTop: 50,
     },
+    emptyState: {
+        alignItems: "center",
+        justifyContent: "center",
+        paddingVertical: 50,
+    },
+    emptyStateText: {
+        fontSize: 16,
+        color: "#666",
+        marginBottom: 8,
+    },
+    emptyStateSubtext: {
+        fontSize: 14,
+        color: "#999",
+        textAlign: "center",
+    },
     modalOverlay: {
         flex: 1,
         backgroundColor: "rgba(0,0,0,0.5)",
         justifyContent: "center",
         alignItems: "center",
+        padding: 20,
     },
     modalContent: {
         backgroundColor: "white",
         borderRadius: 16,
         padding: 24,
-        width: "90%",
+        width: "100%",
         maxWidth: 400,
         maxHeight: "80%",
+    },
+    modalScrollView: {
+        maxHeight: 400,
     },
     modalTitle: {
         fontSize: 20,
@@ -595,6 +780,13 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         textAlign: "center",
     },
+    inputLabel: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#1E3A3A",
+        marginBottom: 5,
+        marginTop: 5,
+    },
     input: {
         borderWidth: 1,
         borderColor: "#E0E0E0",
@@ -602,10 +794,22 @@ const styles = StyleSheet.create({
         padding: 12,
         marginBottom: 12,
         fontSize: 14,
+        backgroundColor: "#fff",
     },
     textArea: {
         height: 80,
         textAlignVertical: "top",
+    },
+    pickerContainer: {
+        borderWidth: 1,
+        borderColor: "#E0E0E0",
+        borderRadius: 8,
+        marginBottom: 12,
+        backgroundColor: "#fff",
+        overflow: "hidden",
+    },
+    picker: {
+        height: 50,
     },
     modalButtons: {
         flexDirection: "row",
@@ -617,6 +821,7 @@ const styles = StyleSheet.create({
         padding: 14,
         borderRadius: 8,
         alignItems: "center",
+        justifyContent: "center",
     },
     cancelBtn: {
         backgroundColor: "#F5F5F5",
@@ -633,5 +838,8 @@ const styles = StyleSheet.create({
         color: "white",
         fontWeight: "600",
         fontSize: 15,
+    },
+    btnDisabled: {
+        opacity: 0.6,
     },
 });

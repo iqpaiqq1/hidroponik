@@ -2,16 +2,16 @@ import React, { useEffect, useState } from "react";
 import {
     View,
     Text,
+    TextInput,
     TouchableOpacity,
     Image,
     StyleSheet,
     ScrollView,
 } from "react-native";
-import MenuSidebar from "./sidebar";
 import { API_URLS } from "../api/apiConfig";
 import { router } from "expo-router";
 
-export default function ProfileScreen() {
+export default function EditProfileScreen() {
     const [profile, setProfile] = useState({
         name: "",
         email: "",
@@ -21,6 +21,7 @@ export default function ProfileScreen() {
     const userId = 1; // nanti ambil dari AsyncStorage
     const token = "TOKEN_KAMU_DI_SINI";
 
+    // === GET PROFILE ===
     const getProfile = async () => {
         try {
             const res = await fetch(`${API_URLS.USER}/${userId}`, {
@@ -42,20 +43,39 @@ export default function ProfileScreen() {
         }
     };
 
+    // === UPDATE PROFILE ===
+    const updateProfile = async () => {
+        try {
+            const res = await fetch(`${API_URLS.USER}/${userId}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    nama: profile.name,
+                    gmail: profile.email,
+                    profile_picture: profile.profile_picture,
+                }),
+            });
+
+            const data = await res.json();
+            console.log("UPDATE RESPONSE:", data);
+
+            router.back(); // balik ke ProfileScreen
+        } catch (error) {
+            console.log("UPDATE ERROR:", error);
+        }
+    };
+
     useEffect(() => {
         getProfile();
     }, []);
 
     return (
         <View style={styles.container}>
-            <MenuSidebar
-                activeMenu="Your Profile"
-                gmail={profile.email}
-                nama={profile.name}
-            />
-
             <ScrollView style={styles.content}>
-                <Text style={styles.title}>Your Profile</Text>
+                <Text style={styles.title}>Edit Profile</Text>
 
                 <View style={styles.card}>
                     <Image
@@ -67,18 +87,33 @@ export default function ProfileScreen() {
                         style={styles.profileImage}
                     />
 
+                    {/* NAME */}
                     <Text style={styles.label}>Nama</Text>
-                    <Text style={styles.value}>{profile.name}</Text>
+                    <TextInput
+                        value={profile.name}
+                        onChangeText={(t) => setProfile({ ...profile, name: t })}
+                        style={styles.input}
+                    />
 
+                    {/* EMAIL */}
                     <Text style={styles.label}>Gmail</Text>
-                    <Text style={styles.value}>{profile.email}</Text>
+                    <TextInput
+                        value={profile.email}
+                        onChangeText={(t) => setProfile({ ...profile, email: t })}
+                        style={styles.input}
+                    />
 
-                    {/* BUTTON KE EDIT PROFILE */}
+                    {/* BUTTON SIMPAN */}
+                    <TouchableOpacity style={styles.btnSave} onPress={updateProfile}>
+                        <Text style={styles.btnSaveText}>Save Changes</Text>
+                    </TouchableOpacity>
+
+                    {/* BUTTON CANCEL */}
                     <TouchableOpacity
-                        style={styles.btnEdit}
-                        onPress={() => router.push("/EditProfileScreen")}
+                        style={styles.btnCancel}
+                        onPress={() => router.back()}
                     >
-                        <Text style={styles.btnEditText}>Edit Profile</Text>
+                        <Text style={styles.btnCancelText}>Cancel</Text>
                     </TouchableOpacity>
                 </View>
             </ScrollView>
@@ -86,15 +121,13 @@ export default function ProfileScreen() {
     );
 }
 
-// --- STYLE LU TIDAK DIRUBAH ---
+// === STYLE PERSIS SAMA PROFILE ===
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        flexDirection: "row",
         backgroundColor: "#f5f5f5",
     },
     content: {
-        flex: 1,
         padding: 20,
     },
     title: {
@@ -126,23 +159,36 @@ const styles = StyleSheet.create({
         fontWeight: "700",
         marginTop: 10,
         color: "#4a2f1a",
+        alignSelf: "flex-start",
     },
-    value: {
+    input: {
+        width: "100%",
+        backgroundColor: "#eee",
+        padding: 10,
+        borderRadius: 8,
         fontSize: 16,
+        marginTop: 5,
         marginBottom: 10,
-        marginTop: 2,
-        color: "#333",
     },
-    btnEdit: {
+    btnSave: {
         marginTop: 20,
         backgroundColor: "#4a2f1a",
         paddingVertical: 12,
         paddingHorizontal: 25,
         borderRadius: 10,
     },
-    btnEditText: {
+    btnSaveText: {
         color: "#fff",
         fontSize: 16,
+        fontWeight: "600",
+    },
+    btnCancel: {
+        marginTop: 10,
+        paddingVertical: 10,
+    },
+    btnCancelText: {
+        color: "#4a2f1a",
+        fontSize: 15,
         fontWeight: "600",
     },
 });
