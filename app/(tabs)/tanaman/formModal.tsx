@@ -37,13 +37,26 @@ type FormModalProps = {
 };
 
 const tanamanOptions = [
-    { nama: "Kangkung", varietas: "Kangkung Bangkok", lama_panen: "30 Hari" },
-    { nama: "Bayam", varietas: "Bayam Hijau Lokal", lama_panen: "28 Hari" },
-    { nama: "Selada", varietas: "Selada Keriting", lama_panen: "40 Hari" },
-    { nama: "Pakcoy", varietas: "Pakcoy Taiwan", lama_panen: "35 Hari" },
-    { nama: "Sawi", varietas: "Sawi Putih", lama_panen: "32 Hari" },
-    { nama: "Tomat", varietas: "Tomat Cherry", lama_panen: "70 Hari" },
+    { nama: "Kangkung", varietas: "Kangkung Bangkok", lama_panen: "25–30 Hari" },
+    { nama: "Bayam Hijau", varietas: "Bayam Hijau Lokal", lama_panen: "25–30 Hari" },
+    { nama: "Bayam Merah", varietas: "Bayam Merah Lokal", lama_panen: "28–32 Hari" },
+    { nama: "Selada", varietas: "Selada Keriting Hijau", lama_panen: "35–45 Hari" },
+    { nama: "Selada Merah", varietas: "Red Coral Lettuce", lama_panen: "40–50 Hari" },
+    { nama: "Pakcoy", varietas: "Pakcoy Taiwan", lama_panen: "30–35 Hari" },
+    { nama: "Sawi Hijau", varietas: "Sawi Hijau Vitamin", lama_panen: "30–35 Hari" },
+    { nama: "Sawi Putih", varietas: "Chinese Cabbage", lama_panen: "45–55 Hari" },
+    { nama: "Seledri", varietas: "Seledri Lokal", lama_panen: "40–50 Hari" },
+    { nama: "Kale", varietas: "Kale Hijau Curly", lama_panen: "45–60 Hari" },
+    { nama: "Kale Red Russian", varietas: "Red Russian Kale", lama_panen: "50–65 Hari" },
+    { nama: "Basil", varietas: "Sweet Basil", lama_panen: "25–30 Hari" },
+    { nama: "Mint", varietas: "Peppermint", lama_panen: "20–30 Hari" },
+    { nama: "Tomat", varietas: "Tomat Cherry Hidroponik", lama_panen: "60–75 Hari" },
+    { nama: "Cabai Rawit", varietas: "Rawit Hidroponik", lama_panen: "70–90 Hari" },
+    { nama: "Paprika", varietas: "Bell Pepper", lama_panen: "70–90 Hari" },
+    { nama: "Mentimun", varietas: "Cucumber Mini Hidroponik", lama_panen: "40–50 Hari" },
+    { nama: "Strawberry", varietas: "Strawberry Hidroponik", lama_panen: "60–90 Hari" },
 ];
+
 
 const statusOptions = ["Sehat", "Siap Panen", "Perlu Perhatian"];
 
