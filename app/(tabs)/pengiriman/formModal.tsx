@@ -7,8 +7,10 @@ import {
     TouchableOpacity,
     StyleSheet,
     Alert,
+    Platform,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { API_URLS } from "../../api/apiConfig";
 
 interface Pengiriman {
@@ -46,10 +48,23 @@ const FormModal: React.FC<FormModalProps> = ({
         id_kurir: "",
         keterangan: "",
     });
+    
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [selectedDate, setSelectedDate] = useState(new Date());
 
     useEffect(() => {
         if (selectedItem) {
             setFormData(selectedItem);
+            // Jika ada tanggal yang sudah ada, konversi ke Date object
+            if (selectedItem.tgl_pengiriman) {
+                const dateParts = selectedItem.tgl_pengiriman.split('/');
+                if (dateParts.length === 3) {
+                    const day = parseInt(dateParts[0]);
+                    const month = parseInt(dateParts[1]) - 1;
+                    const year = parseInt(dateParts[2]);
+                    setSelectedDate(new Date(year, month, day));
+                }
+            }
         } else {
             setFormData({
                 id_supply: "",
@@ -61,8 +76,31 @@ const FormModal: React.FC<FormModalProps> = ({
                 id_kurir: "",
                 keterangan: "",
             });
+            setSelectedDate(new Date());
         }
     }, [selectedItem]);
+
+    const formatDate = (date: Date) => {
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+    };
+
+    const onDateChange = (event: any, selectedDate?: Date) => {
+        // Tutup date picker
+        setShowDatePicker(false);
+        
+        if (selectedDate) {
+            setSelectedDate(selectedDate);
+            const formattedDate = formatDate(selectedDate);
+            setFormData({ ...formData, tgl_pengiriman: formattedDate });
+        }
+    };
+
+    const showDatepicker = () => {
+        setShowDatePicker(true);
+    };
 
     const handleChange = (key: keyof Pengiriman, value: string) => {
         setFormData({ ...formData, [key]: value });
@@ -72,13 +110,11 @@ const FormModal: React.FC<FormModalProps> = ({
         console.log("=== SUBMIT CLICKED ===");
         console.log("Form Data:", formData);
 
-        // Validasi
         if (
             !formData.tgl_pengiriman ||
             !formData.tujuan ||
             !formData.jumlah_dikirim
         ) {
-            console.log("Validasi gagal - field kosong");
             Alert.alert("Peringatan", "Harap isi semua data yang wajib diisi!");
             return;
         }
@@ -89,19 +125,13 @@ const FormModal: React.FC<FormModalProps> = ({
                 ? `${API_URLS.PENGIRIMAN}/${selectedItem.id_pengiriman}`
                 : API_URLS.PENGIRIMAN;
 
-            console.log("Method:", method);
-            console.log("URL:", url);
-            console.log("Body:", JSON.stringify(formData));
-
             const response = await fetch(url, {
                 method,
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(formData),
             });
 
-            console.log("Response status:", response.status);
             const responseData = await response.text();
-            console.log("Response data:", responseData);
 
             if (response.ok) {
                 Alert.alert(
@@ -110,8 +140,8 @@ const FormModal: React.FC<FormModalProps> = ({
                         ? "Data pengiriman berhasil diperbarui!"
                         : "Data pengiriman berhasil ditambahkan!"
                 );
-                onSubmit(); // Refresh data
-                onClose(); // Tutup modal
+                onSubmit();
+                onClose();
             } else {
                 Alert.alert("Gagal", `Terjadi kesalahan: ${responseData}`);
             }
@@ -165,12 +195,14 @@ const FormModal: React.FC<FormModalProps> = ({
                     {/* Input Fields */}
                     <View style={styles.formGroup}>
                         <Text style={styles.label}>Tanggal *</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="dd/mm/yyyy"
-                            value={formData.tgl_pengiriman}
-                            onChangeText={(v) => handleChange("tgl_pengiriman", v)}
-                        />
+                        <TouchableOpacity 
+                            style={styles.dateInput} 
+                            onPress={showDatepicker}
+                        >
+                            <Text style={formData.tgl_pengiriman ? styles.dateText : styles.placeholderText}>
+                                {formData.tgl_pengiriman || "Pilih tanggal..."}
+                            </Text>
+                        </TouchableOpacity>
                     </View>
 
                     <View style={styles.formGroup}>
@@ -234,6 +266,16 @@ const FormModal: React.FC<FormModalProps> = ({
                             <Text style={[styles.buttonText, { color: "#000" }]}>Batal</Text>
                         </TouchableOpacity>
                     </View>
+
+                    {/* Date Picker - Render di luar form agar tidak terganggu layout */}
+                    {showDatePicker && (
+                        <DateTimePicker
+                            value={selectedDate}
+                            mode="date"
+                            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                            onChange={onDateChange}
+                        />
+                    )}
                 </View>
             </View>
         </Modal>
@@ -255,6 +297,7 @@ const styles = StyleSheet.create({
         borderRadius: 15,
         padding: 20,
         elevation: 5,
+        maxHeight: "80%",
     },
     title: {
         fontSize: 18,
@@ -282,6 +325,22 @@ const styles = StyleSheet.create({
         padding: 10,
         fontSize: 14,
         color: "#333",
+        backgroundColor: "#fff",
+    },
+    dateInput: {
+        borderWidth: 1,
+        borderColor: "#ccc",
+        borderRadius: 8,
+        padding: 12,
+        backgroundColor: "#fff",
+    },
+    dateText: {
+        fontSize: 14,
+        color: "#333",
+    },
+    placeholderText: {
+        fontSize: 14,
+        color: "#999",
     },
     textArea: {
         height: 70,
@@ -291,6 +350,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: "#ccc",
         borderRadius: 8,
+        backgroundColor: "#fff",
     },
     buttonRow: {
         flexDirection: "row",
