@@ -9,11 +9,18 @@ import {
     TouchableOpacity,
     TextInput,
     Dimensions,
+    Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Leaf, Egg, Search, Home, Settings, User, Download } from "lucide-react-native";
 import { API_URLS } from "../api/apiConfig";
+import { useLanguage } from "./contexts/LanguageContext";
+import { useTheme } from "./contexts/ThemeContext";
+import { PawPrint } from "lucide-react-native";
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import { tanamanDetailData } from "./detail";
 
 const { width } = Dimensions.get("window");
 
@@ -55,6 +62,10 @@ export default function DashboardUser() {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState("All");
     const router = useRouter();
+    const { t, language } = useLanguage();
+    const { colors, isDark } = useTheme();
+
+    console.log("Current language:", language);
 
     useEffect(() => {
         const loadUserData = async () => {
@@ -85,7 +96,6 @@ export default function DashboardUser() {
                         role: parsed.role || "",
                     });
 
-                    // Fetch data
                     await Promise.all([fetchTanaman(), fetchKandang()]);
                 } else {
                     router.replace("/LoginScreen");
@@ -121,7 +131,6 @@ export default function DashboardUser() {
         }
     };
 
-    // Filter data based on search and category
     const getFilteredData = () => {
         let combined: Array<any> = [];
 
@@ -155,14 +164,144 @@ export default function DashboardUser() {
 
         return combined;
     };
+    const handleDownloadItem = async (item: any) => {
+        try {
+            if (item.type !== 'tanaman') {
+                Alert.alert(
+                    language === 'id' ? 'Info' : 'Info',
+                    language === 'id' ? 'Download PDF hanya tersedia untuk tanaman' : 'PDF download only available for plants'
+                );
+                return;
+            }
 
+            const isIndonesian = language === 'id';
+
+            // Gunakan data dari tanamanDetailData jika ada
+            const detailData = tanamanDetailData[item.nm_tanaman] || {
+                nama: item.nm_tanaman,
+                deskripsi: {
+                    id: "Detail lengkap tidak tersedia",
+                    en: "Detailed information not available"
+                },
+                keunggulan: { id: [], en: [] },
+                syaratTumbuh: {},
+                caraPenanaman: { id: [], en: [] },
+                lamaPanen: item.lama_panen || "-"
+            };
+
+            const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { 
+              font-family: Arial, sans-serif; 
+              padding: 20px; 
+              line-height: 1.6; 
+              color: #333;
+            }
+            .header { 
+              text-align: center; 
+              margin-bottom: 30px; 
+              border-bottom: 3px solid #4CAF50; 
+              padding-bottom: 20px; 
+            }
+            .title { 
+              color: #4CAF50; 
+              font-size: 28px; 
+              margin-bottom: 10px; 
+              font-weight: bold;
+            }
+            .subtitle {
+              color: #666;
+              font-size: 14px;
+            }
+            .section { 
+              margin-bottom: 25px; 
+            }
+            .section-title { 
+              color: #333; 
+              font-size: 20px; 
+              font-weight: bold; 
+              margin-bottom: 12px; 
+              border-left: 4px solid #4CAF50; 
+              padding-left: 12px; 
+            }
+            .card { 
+              background: #f9f9f9; 
+              padding: 15px; 
+              border-radius: 8px; 
+            }
+            .footer { 
+              text-align: center; 
+              margin-top: 40px; 
+              padding-top: 20px;
+              border-top: 2px solid #eee;
+              color: #888; 
+              font-size: 12px; 
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1 class="title">${detailData.nama}</h1>
+            <p class="subtitle">${isIndonesian ? 'Laporan Detail Tanaman Hidroponik' : 'Hydroponic Plant Detail Report'}</p>
+          </div>
+
+          <div class="section">
+            <h2 class="section-title">${isIndonesian ? 'Informasi Dasar' : 'Basic Information'}</h2>
+            <div class="card">
+              <p><strong>${isIndonesian ? 'Nama Tanaman' : 'Plant Name'}:</strong> ${item.nm_tanaman}</p>
+              <p><strong>${isIndonesian ? 'Varietas' : 'Variety'}:</strong> ${item.varietas || '-'}</p>
+              <p><strong>${isIndonesian ? 'Lokasi' : 'Location'}:</strong> ${item.lokasi || '-'}</p>
+              <p><strong>${isIndonesian ? 'Status' : 'Status'}:</strong> ${item.status || '-'}</p>
+            </div>
+          </div>
+
+          ${detailData.deskripsi ? `
+          <div class="section">
+            <h2 class="section-title">${isIndonesian ? 'Deskripsi' : 'Description'}</h2>
+            <div class="card">
+              <p>${detailData.deskripsi[language]}</p>
+            </div>
+          </div>
+          ` : ''}
+
+          <div class="footer">
+            <p>${isIndonesian ? 'Dibuat pada' : 'Generated on'} ${new Date().toLocaleDateString(isIndonesian ? 'id-ID' : 'en-US')}</p>
+            <p>AetherApp - Hydroponic Management System</p>
+          </div>
+        </body>
+        </html>
+        `;
+
+            const { uri } = await Print.printToFileAsync({ html });
+
+            const isAvailable = await Sharing.isAvailableAsync();
+            if (isAvailable) {
+                await Sharing.shareAsync(uri, {
+                    UTI: '.pdf',
+                    mimeType: 'application/pdf',
+                });
+            }
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            Alert.alert(
+                language === 'id' ? 'Error' : 'Error',
+                language === 'id' ? 'Gagal membuat PDF' : 'Failed to generate PDF'
+            );
+        }
+    };
     const filteredData = getFilteredData();
+
+    const styles = createStyles(colors, isDark, width);
 
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#4a7c2c" />
-                <Text style={styles.loadingText}>Memuat data...</Text>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={styles.loadingText}>{t("loading")}</Text>
             </View>
         );
     }
@@ -183,17 +322,26 @@ export default function DashboardUser() {
                             </Text>
                         </View>
                         <Text style={styles.userName}>{userData.nama}</Text>
-                        <Text style={styles.userRole}>Welcome to AgroTech Dashboard</Text>
+                        <Text style={styles.userRole}>{t("welcomeTo")}</Text>
                     </View>
                 </View>
 
                 {/* Hero Banner */}
                 <View style={styles.heroBanner}>
                     <View style={styles.bannerContent}>
-                        <Text style={styles.bannerTitle}>Grow Without Soil.</Text>
-                        <Text style={styles.bannerTitle}>Harvest Without Limits.</Text>
-                        <TouchableOpacity style={styles.bannerButton}>
-                            <Text style={styles.bannerButtonText}>Know More →</Text>
+                        <Text style={styles.bannerTitle}>{t("growWithoutSoil")}</Text>
+                        <Text style={styles.bannerTitle}>{t("harvestWithoutLimits")}</Text>
+                        <TouchableOpacity
+                            style={styles.bannerButton}
+                            onPress={() => router.push({
+                                pathname: "/user/know_more",
+                                params: {
+                                    gmail: userData?.gmail || "",
+                                    nama: userData?.nama || "",
+                                }
+                            })}
+                        >
+                            <Text style={styles.bannerButtonText}>{t("knowMore")}</Text>
                         </TouchableOpacity>
                     </View>
                     <View style={styles.bannerImageContainer}>
@@ -203,91 +351,85 @@ export default function DashboardUser() {
 
                 {/* Search Bar */}
                 <View style={styles.searchContainer}>
-                    <Search size={20} color="#999" style={styles.searchIcon} />
+                    <Search size={20} color={colors.textSecondary} style={styles.searchIcon} />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Cari produk kami, di sini"
+                        placeholder={t("searchPlaceholder")}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
-                        placeholderTextColor="#999"
+                        placeholderTextColor={colors.textSecondary}
                     />
                 </View>
 
                 {/* Categories */}
                 <View style={styles.categorySection}>
                     <View style={styles.categoryHeader}>
-                        <Text style={styles.categoryTitle}>Categories</Text>
-                        <TouchableOpacity>
-                            <Text style={styles.seeAllText}>See All</Text>
-                        </TouchableOpacity>
+                        <Text style={styles.categoryTitle}>{t("categories")}</Text>
+                       
                     </View>
 
-                    <View style={styles.categoryButtons}>
-                        <TouchableOpacity
-                            style={[
-                                styles.categoryButton,
-                                selectedCategory === "All" && styles.categoryButtonActive,
-                            ]}
-                            onPress={() => setSelectedCategory("All")}
-                        >
-                            <Leaf
-                                size={24}
-                                color={selectedCategory === "All" ? "#fff" : "#4A7C2C"}
-                            />
-                            <Text
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={{ paddingRight: 20 }}
+                    >
+                        <View style={styles.categoryButtons}>
+                            <TouchableOpacity
                                 style={[
-                                    styles.categoryButtonText,
-                                    selectedCategory === "All" && styles.categoryButtonTextActive,
+                                    styles.categoryButton,
+                                    selectedCategory === "All" && styles.categoryButtonActive,
                                 ]}
+                                onPress={() => setSelectedCategory("All")}
                             >
-                                All
-                            </Text>
-                        </TouchableOpacity>
+                                <Leaf size={24} color={selectedCategory === "All" ? "#fff" : colors.primary} />
+                                <Text
+                                    style={[
+                                        styles.categoryButtonText,
+                                        selectedCategory === "All" && styles.categoryButtonTextActive,
+                                    ]}
+                                >
+                                    {t("all")}
+                                </Text>
+                            </TouchableOpacity>
 
-                        <TouchableOpacity
-                            style={[
-                                styles.categoryButton,
-                                selectedCategory === "Vegetable" && styles.categoryButtonActive,
-                            ]}
-                            onPress={() => setSelectedCategory("Vegetable")}
-                        >
-                            <Leaf
-                                size={24}
-                                color={selectedCategory === "Vegetable" ? "#fff" : "#4A7C2C"}
-                            />
-                            <Text
+                            <TouchableOpacity
                                 style={[
-                                    styles.categoryButtonText,
-                                    selectedCategory === "Vegetable" &&
-                                    styles.categoryButtonTextActive,
+                                    styles.categoryButton,
+                                    selectedCategory === "Vegetable" && styles.categoryButtonActive,
                                 ]}
+                                onPress={() => setSelectedCategory("Vegetable")}
                             >
-                                Vegetable
-                            </Text>
-                        </TouchableOpacity>
+                                <Leaf size={24} color={selectedCategory === "Vegetable" ? "#fff" : colors.primary} />
+                                <Text
+                                    style={[
+                                        styles.categoryButtonText,
+                                        selectedCategory === "Vegetable" && styles.categoryButtonTextActive,
+                                    ]}
+                                >
+                                    {t("vegetable")}
+                                </Text>
+                            </TouchableOpacity>
 
-                        <TouchableOpacity
-                            style={[
-                                styles.categoryButton,
-                                selectedCategory === "Chicken" && styles.categoryButtonActive,
-                            ]}
-                            onPress={() => setSelectedCategory("Chicken")}
-                        >
-                            <Egg
-                                size={24}
-                                color={selectedCategory === "Chicken" ? "#fff" : "#4A7C2C"}
-                            />
-                            <Text
+                            <TouchableOpacity
                                 style={[
-                                    styles.categoryButtonText,
-                                    selectedCategory === "Chicken" &&
-                                    styles.categoryButtonTextActive,
+                                    styles.categoryButton,
+                                    selectedCategory === "Chicken" && styles.categoryButtonActive,
                                 ]}
+                                onPress={() => setSelectedCategory("Chicken")}
                             >
-                                Chicken
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
+                                <PawPrint size={24} color={selectedCategory === "Chicken" ? "#fff" : colors.primary} />
+                                <Text
+                                    style={[
+                                        styles.categoryButtonText,
+                                        selectedCategory === "Chicken" && styles.categoryButtonTextActive,
+                                    ]}
+                                >
+                                    {t("chicken")}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </ScrollView>
+
                 </View>
 
                 {/* Products Grid */}
@@ -304,14 +446,17 @@ export default function DashboardUser() {
                                 ) : (
                                     <View style={styles.productImagePlaceholder}>
                                         {item.type === "tanaman" ? (
-                                            <Leaf size={50} color="#7ED321" strokeWidth={1.5} />
+                                            <Leaf size={50} color={colors.primary} strokeWidth={1.5} />
                                         ) : (
                                             <Egg size={50} color="#FFB800" strokeWidth={1.5} />
                                         )}
                                     </View>
                                 )}
-                                <TouchableOpacity style={styles.downloadIcon}>
-                                    <Download size={18} color="#333" strokeWidth={2} />
+                                <TouchableOpacity
+                                    style={styles.downloadIcon}
+                                    onPress={() => handleDownloadItem(item)}
+                                >
+                                    <Download size={18} color={isDark ? "#fff" : "#333"} strokeWidth={2} />
                                 </TouchableOpacity>
                             </View>
 
@@ -332,7 +477,7 @@ export default function DashboardUser() {
                                         }
                                     }}
                                 >
-                                    <Text style={styles.detailButtonText}>See detail ↗</Text>
+                                    <Text style={styles.detailButtonText}>{t("seeDetail")}</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -343,7 +488,7 @@ export default function DashboardUser() {
                 {filteredData.length === 0 && (
                     <View style={styles.emptyState}>
                         <Text style={styles.emptyStateText}>
-                            Tidak ada produk yang ditemukan
+                            {t("noProducts")}
                         </Text>
                     </View>
                 )}
@@ -353,13 +498,25 @@ export default function DashboardUser() {
 
             {/* Bottom Navigation */}
             <View style={styles.bottomNav}>
-                <TouchableOpacity style={styles.navItem}>
+                <TouchableOpacity
+                    style={styles.navItem}
+                    onPress={() => router.push("/user/settings")}
+                >
                     <Settings size={24} color="#fff" />
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
+                <TouchableOpacity
+                    style={[styles.navItem, styles.navItemActive]}
+                    onPress={() => router.push("/user/dashboardUser")}
+                >
                     <Home size={28} color="#fff" />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.navItem}>
+                <TouchableOpacity
+                    style={styles.navItem}
+                    onPress={() => router.push({
+                        pathname: "/user/profile",
+                        params: { from: "dashboard" }
+                    })}
+                >
                     <User size={24} color="#fff" />
                 </TouchableOpacity>
             </View>
@@ -367,35 +524,36 @@ export default function DashboardUser() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, isDark: boolean, width: number) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#fff",
+        backgroundColor: colors.background,
     },
     scrollView: {
         flex: 1,
+        backgroundColor: colors.background,
     },
     loadingContainer: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#fdfaf2",
+        backgroundColor: colors.background,
     },
     loadingText: {
         marginTop: 10,
         fontSize: 16,
-        color: "#5b4c3a",
+        color: colors.text,
     },
     header: {
         padding: 20,
         paddingTop: 40,
-        backgroundColor: "#fff",
+        backgroundColor: colors.background,
     },
     userAvatar: {
         width: 50,
         height: 50,
         borderRadius: 25,
-        backgroundColor: "#FF6B35",
+        backgroundColor: colors.secondary,
         justifyContent: "center",
         alignItems: "center",
         marginBottom: 8,
@@ -408,17 +566,17 @@ const styles = StyleSheet.create({
     userName: {
         fontSize: 18,
         fontWeight: "700",
-        color: "#333",
+        color: colors.text,
     },
     userRole: {
         fontSize: 12,
-        color: "#999",
+        color: colors.textSecondary,
         marginTop: 2,
     },
     heroBanner: {
         margin: 20,
         marginTop: 10,
-        backgroundColor: "#7ED321",
+        backgroundColor: colors.primary,
         borderRadius: 20,
         padding: 20,
         flexDirection: "row",
@@ -456,7 +614,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#f5f5f5",
+        backgroundColor: isDark ? colors.card : "#f5f5f5",
         borderRadius: 12,
         paddingHorizontal: 15,
         height: 50,
@@ -467,7 +625,7 @@ const styles = StyleSheet.create({
     searchInput: {
         flex: 1,
         fontSize: 14,
-        color: "#333",
+        color: colors.text,
     },
     categorySection: {
         marginHorizontal: 20,
@@ -482,11 +640,11 @@ const styles = StyleSheet.create({
     categoryTitle: {
         fontSize: 18,
         fontWeight: "700",
-        color: "#333",
+        color: colors.text,
     },
     seeAllText: {
         fontSize: 14,
-        color: "#7ED321",
+        color: colors.primary,
         fontWeight: "600",
     },
     categoryButtons: {
@@ -496,22 +654,22 @@ const styles = StyleSheet.create({
     categoryButton: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#fff",
+        backgroundColor: colors.card,
         borderWidth: 2,
-        borderColor: "#4A7C2C",
+        borderColor: colors.primary,
         borderRadius: 15,
         paddingHorizontal: 20,
         paddingVertical: 12,
         gap: 8,
     },
     categoryButtonActive: {
-        backgroundColor: "#7ED321",
-        borderColor: "#7ED321",
+        backgroundColor: colors.primary,
+        borderColor: colors.primary,
     },
     categoryButtonText: {
         fontSize: 14,
         fontWeight: "600",
-        color: "#4A7C2C",
+        color: colors.primary,
     },
     categoryButtonTextActive: {
         color: "#fff",
@@ -524,20 +682,20 @@ const styles = StyleSheet.create({
     },
     productCard: {
         width: (width - 55) / 2,
-        backgroundColor: "#fff",
+        backgroundColor: colors.card,
         borderRadius: 15,
         overflow: "hidden",
-        elevation: 3,
+        elevation: isDark ? 0 : 3,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
+        shadowOpacity: isDark ? 0 : 0.1,
         shadowRadius: 4,
         marginBottom: 5,
     },
     productImageContainer: {
         width: "100%",
         height: 150,
-        backgroundColor: "#f5f5f5",
+        backgroundColor: isDark ? colors.border : "#f5f5f5",
         position: "relative",
     },
     productImage: {
@@ -549,13 +707,13 @@ const styles = StyleSheet.create({
         height: "100%",
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#f9f9f9",
+        backgroundColor: isDark ? colors.border : "#f9f9f9",
     },
     downloadIcon: {
         position: "absolute",
         top: 10,
         right: 10,
-        backgroundColor: "rgba(255,255,255,0.95)",
+        backgroundColor: isDark ? "rgba(0,0,0,0.7)" : "rgba(255,255,255,0.95)",
         width: 32,
         height: 32,
         borderRadius: 16,
@@ -569,38 +727,17 @@ const styles = StyleSheet.create({
     },
     productInfo: {
         padding: 12,
-        backgroundColor: "#fff",
+        backgroundColor: colors.card,
     },
     productName: {
         fontSize: 15,
         fontWeight: "700",
-        color: "#333",
+        color: colors.text,
         marginBottom: 10,
         minHeight: 20,
     },
-    productSubtitle: {
-        fontSize: 11,
-        color: "#999",
-        marginBottom: 10,
-    },
-    productFooter: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-    },
-    stockBadge: {
-        backgroundColor: "#f0f0f0",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
-    },
-    stockText: {
-        fontSize: 10,
-        fontWeight: "600",
-        color: "#666",
-    },
     detailButton: {
-        backgroundColor: "#7ED321",
+        backgroundColor: colors.primary,
         paddingHorizontal: 16,
         paddingVertical: 10,
         borderRadius: 20,
@@ -618,12 +755,12 @@ const styles = StyleSheet.create({
     },
     emptyStateText: {
         fontSize: 16,
-        color: "#999",
+        color: colors.textSecondary,
         fontStyle: "italic",
     },
     bottomNav: {
         flexDirection: "row",
-        backgroundColor: "#7ED321",
+        backgroundColor: colors.primary,
         borderRadius: 35,
         marginHorizontal: 20,
         marginBottom: 20,

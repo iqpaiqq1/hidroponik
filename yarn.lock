@@ -3772,10 +3772,10 @@ expo-constants@~18.0.10, expo-constants@~18.0.8, expo-constants@~18.0.9:
     "@expo/config" "~12.0.10"
     "@expo/env" "~2.0.7"
 
-expo-file-system@~19.0.17:
-  version "19.0.17"
-  resolved "https://registry.npmjs.org/expo-file-system/-/expo-file-system-19.0.17.tgz"
-  integrity sha512-WwaS01SUFrxBnExn87pg0sCTJjZpf2KAOzfImG0o8yhkU7fbYpihpl/oocXBEsNbj58a8hVt1Y4CVV5c1tzu/g==
+expo-file-system@~19.0.17, expo-file-system@~19.0.19:
+  version "19.0.19"
+  resolved "https://registry.npmjs.org/expo-file-system/-/expo-file-system-19.0.19.tgz"
+  integrity sha512-OrpOV4fEBFMFv+jy7PnENpPbsWoBmqWGidSwh1Ai52PLl6JIInYGfZTc6kqyPNGtFTwm7Y9mSWnE8g+dtLxu7g==
 
 expo-font@~14.0.9:
   version "14.0.9"
@@ -3837,6 +3837,11 @@ expo-modules-core@3.0.25:
   dependencies:
     invariant "^2.2.4"
 
+expo-print@~15.0.7:
+  version "15.0.7"
+  resolved "https://registry.npmjs.org/expo-print/-/expo-print-15.0.7.tgz"
+  integrity sha512-DLjURmu4D2sfJrT7a/x4l4Hb0mlJSeu3OKCa2iIilO/AATddekTzgJejEV2QkMFMSX6CiU5g+h3PuyNq2I3rfQ==
+
 expo-router@~6.0.13:
   version "6.0.14"
   resolved "https://registry.npmjs.org/expo-router/-/expo-router-6.0.14.tgz"
@@ -3870,6 +3875,11 @@ expo-server@^1.0.3, expo-server@^1.0.4:
   version "1.0.4"
   resolved "https://registry.npmjs.org/expo-server/-/expo-server-1.0.4.tgz"
   integrity sha512-IN06r3oPxFh3plSXdvBL7dx0x6k+0/g0bgxJlNISs6qL5Z+gyPuWS750dpTzOeu37KyBG0RcyO9cXUKzjYgd4A==
+
+expo-sharing@~14.0.7:
+  version "14.0.7"
+  resolved "https://registry.npmjs.org/expo-sharing/-/expo-sharing-14.0.7.tgz"
+  integrity sha512-t/5tR8ZJNH6tMkHXlF7453UafNIfrpfTG+THN9EMLC4Wsi4bJuESPm3NdmWDg2D4LDALJI/LQo0iEnLAd5Sp4g==
 
 expo-splash-screen@~0.18.0:
   version "0.18.2"
@@ -4258,9 +4268,9 @@ glob@7.1.6:
     path-is-absolute "^1.0.0"
 
 glob@^10.3.10, glob@^10.4.2:
-  version "10.4.5"
-  resolved "https://registry.npmjs.org/glob/-/glob-10.4.5.tgz"
-  integrity sha512-7Bv8RF0k6xjo7d4A/PxYLbUCfb6c+Vpd2/mB2yRDlew7Jb5hEXiCD9ibfO7wpk8i4sevK6DFny9h7EYbM3/sHg==
+  version "10.5.0"
+  resolved "https://registry.npmjs.org/glob/-/glob-10.5.0.tgz"
+  integrity sha512-DfXN8DfhJ7NH3Oe7cFmu3NCu1wKbkReJ8TorzSAFbSKrlNaQSKfIzqYqVY8zlbs2NLBbWpRiU52GX2PbaBVNkg==
   dependencies:
     foreground-child "^3.1.0"
     jackspeak "^3.1.2"
@@ -6038,6 +6048,11 @@ react-native-gesture-handler@~2.28.0:
     hoist-non-react-statics "^3.3.0"
     invariant "^2.2.4"
 
+react-native-html-to-pdf@^1.3.0:
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/react-native-html-to-pdf/-/react-native-html-to-pdf-1.3.0.tgz#591d9120038e2a1717f3a9eb47b16c84928066f7"
+  integrity sha512-UCbQO1k5yeajaJrEF7Wqq8ojdgpxsTbICQvtorXmuO1LkU/a6B3/tZyLes4zXCiq/5nTMTNA/k9m5bYStg5S0Q==
+
 react-native-is-edge-to-edge@^1.1.6, react-native-is-edge-to-edge@^1.2.1:
   version "1.2.1"
   resolved "https://registry.npmjs.org/react-native-is-edge-to-edge/-/react-native-is-edge-to-edge-1.2.1.tgz"
@@ -6045,7 +6060,7 @@ react-native-is-edge-to-edge@^1.1.6, react-native-is-edge-to-edge@^1.2.1:
 
 react-native-maps@1.20.1:
   version "1.20.1"
-  resolved "https://registry.yarnpkg.com/react-native-maps/-/react-native-maps-1.20.1.tgz#f613364886b2f72db56cafcd2bd7d3a35f470dfb"
+  resolved "https://registry.npmjs.org/react-native-maps/-/react-native-maps-1.20.1.tgz"
   integrity sha512-NZI3B5Z6kxAb8gzb2Wxzu/+P2SlFIg1waHGIpQmazDSCRkNoHNY4g96g+xS0QPSaG/9xRBbDNnd2f2/OW6t6LQ==
   dependencies:
     "@types/geojson" "^7946.0.13"
