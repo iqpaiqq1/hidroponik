@@ -4,6 +4,8 @@ import { StatusBar } from "expo-status-bar";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import "react-native-reanimated";
 
+
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
@@ -14,5 +16,6 @@ export default function RootLayout() {
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
+      
   );
 }
