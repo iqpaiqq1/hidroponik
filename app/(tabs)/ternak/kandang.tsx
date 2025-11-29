@@ -1,3 +1,4 @@
+import { Picker } from "@react-native-picker/picker";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -12,9 +13,8 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import MenuSidebar from "../sidebar";
 import { API_URLS } from "../../api/apiConfig";
-import { Picker } from "@react-native-picker/picker";
+import MenuSidebar from "../sidebar";
 
 type Kandang = {
     id_kandang: number;
@@ -24,91 +24,96 @@ type Kandang = {
     jenis_hewan: string;
     Hasil_Produksi: string;
     Jml_produksi: number;
-    foto_hasil: string;
     keterangan: string;
 };
 
-// Dummy data untuk hewan sesuai dengan struktur database
+type CountdownData = {
+    kandang: Kandang;
+    daysRemaining: number;
+    percentage: number;
+    statusText: string;
+    statusColor: string;
+    isReadyForProduction: boolean;
+};
+
+// Data hewan dengan siklus produksi
 const HEWAN_OPTIONS = [
     {
         nama: "Ayam Petelur",
         varietas: "Ayam Ras Petelur",
-        lama_panen: "1–2 Hari",
+        lama_produksi: 21,
+        siklus_produksi: 1,
         Hasil_Produksi: "Telur",
         min_produksi: 50,
-        max_produksi: 200
+        max_produksi: 200,
+        satuan_produksi: "butir/hari",
+        estimasi_produksi: "85-95%"
     },
     {
         nama: "Ayam Pedaging",
         varietas: "Ayam Broiler",
-        lama_panen: "30–40 Hari",
+        lama_produksi: 35,
+        siklus_produksi: 35,
         Hasil_Produksi: "Daging",
         min_produksi: 1,
-        max_produksi: 3
+        max_produksi: 3,
+        satuan_produksi: "kg/ekor",
+        estimasi_produksi: "2-3 kg/ekor"
     },
     {
         nama: "Lele",
         varietas: "Lele Sangkuriang",
-        lama_panen: "60–80 Hari",
+        lama_produksi: 70,
+        siklus_produksi: 70,
         Hasil_Produksi: "Ikan",
         min_produksi: 100,
-        max_produksi: 500
+        max_produksi: 500,
+        satuan_produksi: "ekor",
+        estimasi_produksi: "80-90% survival"
     },
     {
         nama: "Bebek Petelur",
         varietas: "Bebek Mojosari",
-        lama_panen: "1–2 Hari",
+        lama_produksi: 22,
+        siklus_produksi: 1,
         Hasil_Produksi: "Telur Bebek",
         min_produksi: 30,
-        max_produksi: 100
+        max_produksi: 100,
+        satuan_produksi: "butir/hari",
+        estimasi_produksi: "70-85%"
     },
     {
         nama: "Puyuh",
         varietas: "Puyuh Lokal",
-        lama_panen: "1–2 Hari",
+        lama_produksi: 40,
+        siklus_produksi: 1,
         Hasil_Produksi: "Telur Puyuh",
         min_produksi: 80,
-        max_produksi: 150
+        max_produksi: 150,
+        satuan_produksi: "butir/hari",
+        estimasi_produksi: "75-90%"
     },
     {
         nama: "Kambing",
         varietas: "Kambing Peranakan Etawa",
-        lama_panen: "180–240 Hari",
+        lama_produksi: 180,
+        siklus_produksi: 1,
         Hasil_Produksi: "Susu",
         min_produksi: 1,
-        max_produksi: 3
+        max_produksi: 3,
+        satuan_produksi: "liter/hari",
+        estimasi_produksi: "1-2 liter/hari"
     },
     {
         nama: "Sapi Perah",
         varietas: "Friesian Holstein",
-        lama_panen: "1–2 Hari",
+        lama_produksi: 240,
+        siklus_produksi: 1,
         Hasil_Produksi: "Susu Sapi",
         min_produksi: 15,
-        max_produksi: 25
-    },
-    {
-        nama: "Ikan Nila",
-        varietas: "Nila Merah",
-        lama_panen: "120–150 Hari",
-        Hasil_Produksi: "Ikan",
-        min_produksi: 80,
-        max_produksi: 300
-    },
-    {
-        nama: "Ikan Gurame",
-        varietas: "Gurame Soang",
-        lama_panen: "180–240 Hari",
-        Hasil_Produksi: "Ikan",
-        min_produksi: 20,
-        max_produksi: 50
-    },
-    {
-        nama: "tes",
-        varietas: "tes",
-        lama_panen: "0",
-        Hasil_Produksi: "daging",
-        min_produksi: 10,
-        max_produksi: 20
+        max_produksi: 25,
+        satuan_produksi: "liter/hari",
+        estimasi_produksi: "15-20 liter/hari"
     }
 ];
 
@@ -128,6 +133,102 @@ export default function KandangScreen() {
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [saving, setSaving] = useState(false);
     const [deletingId, setDeletingId] = useState<number | null>(null);
+
+    // Fungsi calculate countdown
+    const calculateCountdown = (kandang: Kandang): CountdownData => {
+        const hewanInfo = HEWAN_OPTIONS.find(h => h.nama === kandang.jenis_hewan);
+
+        if (!hewanInfo) {
+            return {
+                kandang,
+                daysRemaining: 0,
+                percentage: 100,
+                statusText: "Jenis Tidak Dikenal",
+                statusColor: "#FF6B6B",
+                isReadyForProduction: false
+            };
+        }
+        const simulatedDaysPassed = kandang.Jml_produksi > 0 ? hewanInfo.lama_produksi : 0;
+
+        const daysRemaining = Math.max(0, hewanInfo.lama_produksi - simulatedDaysPassed);
+        const percentage = Math.min(100, Math.floor((simulatedDaysPassed / hewanInfo.lama_produksi) * 100));
+
+        let statusText = "";
+        let statusColor = "";
+        let isReadyForProduction = false;
+
+        if (simulatedDaysPassed === 0) {
+            statusText = "Baru Ditambahkan";
+            statusColor = "#2196F3";
+        } else if (daysRemaining > 7) {
+            statusText = "Tumbuh";
+            statusColor = "#2196F3";
+        } else if (daysRemaining > 0 && daysRemaining <= 7) {
+            statusText = "Segera Produksi";
+            statusColor = "#FF9800";
+        } else if (daysRemaining === 0) {
+            statusText = "Siap Produksi";
+            statusColor = "#4CAF50";
+            isReadyForProduction = true;
+        } else {
+            statusText = "Dalam Produksi";
+            statusColor = "#4CAF50";
+            isReadyForProduction = true;
+        }
+
+        return {
+            kandang,
+            daysRemaining,
+            percentage,
+            statusText,
+            statusColor,
+            isReadyForProduction
+        };
+    };
+
+    // Fungsi generate produksi otomatis
+    const generateProduction = (kandang: Kandang, countdownData: CountdownData): number => {
+        if (!countdownData.isReadyForProduction) {
+            return kandang.Jml_produksi;
+        }
+
+        const hewanInfo = HEWAN_OPTIONS.find(h => h.nama === kandang.jenis_hewan);
+        if (!hewanInfo) return kandang.Jml_produksi;
+
+        let production = 0;
+
+        switch (kandang.jenis_hewan) {
+            case "Ayam Petelur":
+            case "Bebek Petelur":
+            case "Puyuh":
+                const productionRate = 0.85;
+                production = Math.floor(kandang.jumlah_hewan * productionRate);
+                break;
+
+            case "Ayam Pedaging":
+                const avgWeight = 2.5;
+                production = Math.floor(kandang.jumlah_hewan * avgWeight);
+                break;
+
+            case "Lele":
+                const survivalRate = 0.85;
+                production = Math.floor(kandang.jumlah_hewan * survivalRate);
+                break;
+
+            case "Kambing":
+                production = Math.floor(kandang.jumlah_hewan * 1.5);
+                break;
+
+            case "Sapi Perah":
+                production = Math.floor(kandang.jumlah_hewan * 18);
+                break;
+
+            default:
+                production = kandang.Jml_produksi;
+        }
+
+        return production;
+    };
 
     const fetchData = async () => {
         setLoading(true);
@@ -182,15 +283,14 @@ export default function KandangScreen() {
             return Alert.alert("Error", "Jenis hewan tidak valid");
         }
 
-        // Sesuaikan payload dengan struktur database dan controller
+        // FIX: Payload tanpa foto_hasil
         const payload = {
             nm_kandang: nmKandang.trim(),
             kapasitas: parseInt(kapasitas),
             jumlah_hewan: parseInt(jumlahHewan),
             jenis_hewan: jenisHewan,
-            Hasil_Produksi: hewanInfo.Hasil_Produksi, // Perhatikan huruf besar
-            Jml_produksi: 0, // Mulai dari 0, sesuai dengan nullable di controller
-            foto_hasil: "", // Default empty string
+            Hasil_Produksi: hewanInfo.Hasil_Produksi,
+            Jml_produksi: 0,
             keterangan: keterangan.trim()
         };
 
@@ -201,7 +301,26 @@ export default function KandangScreen() {
             const method = selectedId ? "PUT" : "POST";
             const url = selectedId ? `${API_URLS.KANDANG}/${selectedId}` : API_URLS.KANDANG;
 
-            console.log("Request:", method, url);
+            // ✅ FIX: Untuk UPDATE, kirim HANYA field yang diubah
+            const payload = selectedId ? {
+                nm_kandang: nmKandang.trim(),
+                kapasitas: parseInt(kapasitas),
+                jumlah_hewan: parseInt(jumlahHewan),
+                jenis_hewan: jenisHewan,
+                Hasil_Produksi: hewanInfo.Hasil_Produksi,
+                keterangan: keterangan.trim()
+            } : {
+                nm_kandang: nmKandang.trim(),
+                kapasitas: parseInt(kapasitas),
+                jumlah_hewan: parseInt(jumlahHewan),
+                jenis_hewan: jenisHewan,
+                Hasil_Produksi: hewanInfo.Hasil_Produksi,
+                Jml_produksi: 0,
+                keterangan: keterangan.trim()
+            };
+
+            console.log("🔧 Request:", method, url);
+            console.log("🔧 Payload:", payload);
 
             const res = await fetch(url, {
                 method,
@@ -212,19 +331,33 @@ export default function KandangScreen() {
                 body: JSON.stringify(payload),
             });
 
-            console.log("Response status:", res.status);
-            const responseData = await res.json();
-            console.log("Response data:", responseData);
+            console.log("🔧 Response status:", res.status);
+
+            const contentType = res.headers.get("content-type") || "";
+            let responseData: any = null;
+
+            try {
+                if (contentType.includes("application/json")) {
+                    responseData = await res.json();
+                } else {
+                    responseData = await res.text();
+                }
+            } catch (err) {
+                responseData = null;
+            }
+
+            console.log("🔧 Response data:", responseData);
 
             if (res.ok) {
                 Alert.alert("Sukses", selectedId ? "Data berhasil diupdate" : "Data berhasil ditambahkan");
                 resetForm();
                 fetchData();
             } else {
-                throw new Error(responseData.message || `Error ${res.status}`);
+                const msg = responseData?.message || responseData || `Error ${res.status}`;
+                throw new Error(msg);
             }
         } catch (error: any) {
-            console.error("Error detail:", error);
+            console.error("❌ Error detail:", error);
             Alert.alert("Error", error.message || "Gagal menyimpan data");
         } finally {
             setSaving(false);
@@ -252,48 +385,160 @@ export default function KandangScreen() {
         setModalVisible(true);
     };
 
-    const handleDelete = async (id_kandang: number) => {
+    const handleDelete = (id_kandang: number) => {
+        console.log("🗑️ handleDelete DIPANGGIL! ID:", id_kandang);
+
         Alert.alert(
-            "Konfirmasi Hapus",
-            "Apakah Anda yakin ingin menghapus kandang ini?",
+            "🗑️ HAPUS KANDANG",
+            `YAKIN HAPUS "${data.find(d => d.id_kandang === id_kandang)?.nm_kandang}"?`,
             [
-                { text: "Batal", style: "cancel" },
                 {
-                    text: "Hapus",
-                    style: "destructive",
-                    onPress: () => deleteKandang(id_kandang),
+                    text: "❌ BATAL",
+                    style: "cancel",
+                    onPress: () => console.log("🛑 User pilih BATAL")
                 },
-            ]
+                {
+                    text: "🗑️ HAPUS SEKARANG",
+                    style: "destructive",
+                    onPress: () => {
+                        console.log("✅ User pilih HAPUS! Panggil deleteKandang ID:", id_kandang);
+                        deleteKandang(id_kandang);
+                    }
+                },
+            ],
+            {
+                cancelable: false,
+                userInterfaceStyle: 'light' // Force light mode biar jelas
+            }
         );
+        console.log("🗑️ Alert sudah ditampilkan");
     };
 
     const deleteKandang = async (id_kandang: number) => {
+        console.log("🚀 deleteKandang START, ID:", id_kandang);
+
         try {
             setDeletingId(id_kandang);
 
-            const response = await fetch(`${API_URLS.KANDANG}/${id_kandang}`, {
+            // ✅ TRY 1: DELETE tanpa body (paling umum)
+            let response = await fetch(`${API_URLS.KANDANG}/${id_kandang}`, {
                 method: "DELETE",
+                headers: {
+                    "Accept": "application/json"
+                }
+            });
+
+            console.log("🧪 TRY 1 - Status:", response.status);
+
+            // ✅ TRY 2: Kalau gagal, coba dengan body kosong
+            if (!response.ok) {
+                console.log("🔄 TRY 2 - Dengan body kosong");
+                response = await fetch(`${API_URLS.KANDANG}/${id_kandang}`, {
+                    method: "DELETE",
+                    headers: {
+                        "Accept": "application/json",
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({})
+                });
+                console.log("🧪 TRY 2 - Status:", response.status);
+            }
+
+            // ✅ TRY 3: Kalau masih gagal, coba POST delete
+            if (!response.ok) {
+                console.log("🔄 TRY 3 - POST ke endpoint delete");
+                response = await fetch(`${API_URLS.KANDANG}/delete`, {
+                    method: "POST",
+                    headers: {
+                        "Accept": "application/json",
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ id_kandang })
+                });
+                console.log("🧪 TRY 3 - Status:", response.status);
+            }
+
+            // Parse response
+            const contentType = response.headers.get("content-type") || "";
+            let responseData: any = null;
+
+            try {
+                if (contentType.includes("application/json")) {
+                    responseData = await response.json();
+                } else {
+                    responseData = await response.text();
+                }
+            } catch (err) {
+                responseData = null;
+            }
+
+            console.log("📋 Final response:", { status: response.status, data: responseData });
+
+            if (response.ok) {
+                console.log("✅ DELETE SUKSES!");
+                Alert.alert("Sukses", "Data berhasil dihapus");
+                fetchData();
+            } else {
+                const msg = responseData?.message || `Error ${response.status}`;
+                console.error("❌ DELETE GAGAL:", msg);
+                Alert.alert("Error", `Gagal hapus: ${msg}`);
+            }
+        } catch (error: any) {
+            console.error("💥 DELETE ERROR:", error);
+            Alert.alert("Error", "Gagal menghapus data: " + (error.message || "Unknown error"));
+        } finally {
+            setDeletingId(null);
+            console.log("🏁 deleteKandang FINISH");
+        }
+    };
+    // Fungsi untuk update produksi
+    const handleUpdateProduction = async (kandang: Kandang) => {
+        const countdownData = calculateCountdown(kandang);
+
+        if (!countdownData.isReadyForProduction) {
+            Alert.alert("Info", "Hewan belum siap untuk produksi");
+            return;
+        }
+
+        const newProduction = generateProduction(kandang, countdownData);
+
+        const payload = {
+            nm_kandang: kandang.nm_kandang,
+            kapasitas: kandang.kapasitas,
+            jumlah_hewan: kandang.jumlah_hewan,
+            jenis_hewan: kandang.jenis_hewan,
+            Hasil_Produksi: kandang.Hasil_Produksi,
+            Jml_produksi: newProduction,
+            keterangan: kandang.keterangan
+        };
+
+        try {
+            const res = await fetch(`${API_URLS.KANDANG}/${kandang.id_kandang}`, {
+                method: "PUT",
                 headers: {
                     "Accept": "application/json",
                     "Content-Type": "application/json"
                 },
+                body: JSON.stringify(payload),
             });
-
-            console.log("Delete response status:", response.status);
-            const responseData = await response.json();
-            console.log("Delete response data:", responseData);
-
-            if (response.ok) {
-                await fetchData();
-                Alert.alert("Sukses", "Data berhasil dihapus");
-            } else {
-                throw new Error(responseData.message || `Error ${response.status}`);
+            const contentType = res.headers.get("content-type") || "";
+            let responseData: any = null;
+            try {
+                if (contentType.includes("application/json")) responseData = await res.json();
+                else responseData = await res.text();
+            } catch (err) {
+                responseData = null;
             }
-        } catch (error: any) {
-            console.error("Delete error:", error);
-            Alert.alert("Error", error.message || "Gagal menghapus data");
-        } finally {
-            setDeletingId(null);
+
+            if (res.ok) {
+                Alert.alert("Sukses", `Produksi ${kandang.Hasil_Produksi} berhasil diupdate: ${newProduction}`);
+                fetchData();
+            } else {
+                const msg = responseData && responseData.message ? responseData.message : (typeof responseData === 'string' && responseData.length ? responseData : `Error ${res.status}`);
+                throw new Error(msg);
+            }
+        } catch (error) {
+            Alert.alert("Error", "Gagal mengupdate produksi");
         }
     };
 
@@ -321,11 +566,10 @@ export default function KandangScreen() {
     );
 
     const renderKandangItem = ({ item }: { item: Kandang }) => {
-        const percentage = getPercentage(item.jumlah_hewan, item.kapasitas);
-        const isOvercrowded = percentage >= 90;
-        const isAlmostFull = percentage >= 75 && percentage < 90;
-        const isDeleting = deletingId === item.id_kandang;
+        const countdownData = calculateCountdown(item);
         const hewanInfo = HEWAN_OPTIONS.find(h => h.nama === item.jenis_hewan);
+        const isDeleting = deletingId === item.id_kandang;
+        const capacityPercentage = getPercentage(item.jumlah_hewan, item.kapasitas);
 
         return (
             <View style={[styles.kandangCard, isDeleting && styles.cardDeleting]}>
@@ -336,34 +580,76 @@ export default function KandangScreen() {
                         {hewanInfo && (
                             <Text style={styles.kandangVarietas}>{hewanInfo.varietas}</Text>
                         )}
-                        <Text style={styles.kandangProduksi}>📦 {item.Hasil_Produksi}: {item.Jml_produksi}</Text>
+                        <Text style={styles.kandangProduksi}>
+                            📦 {item.Hasil_Produksi}: {item.Jml_produksi} {hewanInfo?.satuan_produksi}
+                        </Text>
                         {item.keterangan && (
                             <Text style={styles.kandangKeterangan}>📝 {item.keterangan}</Text>
                         )}
                     </View>
                     <View style={styles.kandangStats}>
+                        <TouchableOpacity
+                            style={[styles.statusBadge, { backgroundColor: countdownData.statusColor }]}
+                            onPress={() => handleUpdateProduction(item)}
+                        >
+                            <Text style={styles.statusText}>{countdownData.statusText}</Text>
+                        </TouchableOpacity>
                         <Text style={styles.kandangAmount}>
                             {item.jumlah_hewan}/{item.kapasitas}
                         </Text>
-                        <Text style={styles.kandangPercentage}>{percentage}% Terisi</Text>
+                        <Text style={styles.kandangPercentage}>{capacityPercentage}% Terisi</Text>
                     </View>
                 </View>
 
+                {/* Progress Bar Kapasitas */}
                 <View style={styles.progressBarContainer}>
                     <View
                         style={[
                             styles.progressBar,
                             {
-                                width: `${Math.min(percentage, 100)}%`,
-                                backgroundColor: isOvercrowded
+                                width: `${Math.min(capacityPercentage, 100)}%`,
+                                backgroundColor: capacityPercentage >= 90
                                     ? "#FF6B6B"
-                                    : isAlmostFull
+                                    : capacityPercentage >= 75
                                         ? "#FFA500"
                                         : "#1E3A3A",
                             },
                         ]}
                     />
                 </View>
+
+                {/* Countdown Progress */}
+                <View style={styles.countdownSection}>
+                    <View style={styles.countdownHeader}>
+                        <Text style={styles.countdownLabel}>
+                            {countdownData.daysRemaining > 0
+                                ? `${countdownData.daysRemaining} Hari Menuju Produksi`
+                                : "Siap Untuk Produksi"
+                            }
+                        </Text>
+                        <Text style={styles.countdownPercentage}>{countdownData.percentage}%</Text>
+                    </View>
+                    <View style={styles.countdownProgressContainer}>
+                        <View
+                            style={[
+                                styles.countdownProgressBar,
+                                {
+                                    width: `${Math.min(countdownData.percentage, 100)}%`,
+                                    backgroundColor: countdownData.statusColor
+                                },
+                            ]}
+                        />
+                    </View>
+                </View>
+
+                {countdownData.isReadyForProduction && (
+                    <TouchableOpacity
+                        style={styles.productionButton}
+                        onPress={() => handleUpdateProduction(item)}
+                    >
+                        <Text style={styles.productionButtonText}>🔄 Update Produksi</Text>
+                    </TouchableOpacity>
+                )}
 
                 <View style={styles.actionButtons}>
                     <TouchableOpacity
@@ -376,8 +662,12 @@ export default function KandangScreen() {
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.deleteBtn, isDeleting && styles.btnDisabled]}
-                        onPress={() => handleDelete(item.id_kandang)}
+                        onPress={() => {
+                            console.log("🗑️ DELETE BUTTON CLICKED! ID:", item.id_kandang); // ✅ DEBUG
+                            handleDelete(item.id_kandang);
+                        }}
                         disabled={isDeleting}
+                        activeOpacity={0.7} // ✅ Visual feedback
                     >
                         {isDeleting ? (
                             <ActivityIndicator size="small" color="#fff" />
@@ -508,12 +798,23 @@ export default function KandangScreen() {
                                         {HEWAN_OPTIONS.map((hewan, index) => (
                                             <Picker.Item
                                                 key={index}
-                                                label={`${hewan.nama} - ${hewan.lama_panen}`}
+                                                label={`${hewan.nama} - ${hewan.lama_produksi} hari`}
                                                 value={hewan.nama}
                                             />
                                         ))}
                                     </Picker>
                                 </View>
+
+                                {jenisHewan && (
+                                    <View style={styles.hewanInfo}>
+                                        <Text style={styles.hewanInfoText}>
+                                            Hasil Produksi: {HEWAN_OPTIONS.find(h => h.nama === jenisHewan)?.Hasil_Produksi}
+                                        </Text>
+                                        <Text style={styles.hewanInfoText}>
+                                            Estimasi: {HEWAN_OPTIONS.find(h => h.nama === jenisHewan)?.estimasi_produksi}
+                                        </Text>
+                                    </View>
+                                )}
 
                                 <Text style={styles.inputLabel}>Keterangan *</Text>
                                 <TextInput
@@ -706,6 +1007,17 @@ const styles = StyleSheet.create({
     kandangStats: {
         alignItems: "flex-end",
     },
+    statusBadge: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 15,
+        marginBottom: 5,
+    },
+    statusText: {
+        color: "#fff",
+        fontSize: 11,
+        fontWeight: "600",
+    },
     kandangAmount: {
         fontSize: 18,
         fontWeight: "bold",
@@ -726,6 +1038,48 @@ const styles = StyleSheet.create({
     progressBar: {
         height: "100%",
         borderRadius: 4,
+    },
+    countdownSection: {
+        marginBottom: 12,
+    },
+    countdownHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 8,
+    },
+    countdownLabel: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#333",
+    },
+    countdownPercentage: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#666",
+    },
+    countdownProgressContainer: {
+        height: 6,
+        backgroundColor: "#F0F0F0",
+        borderRadius: 3,
+        overflow: "hidden",
+    },
+    countdownProgressBar: {
+        height: "100%",
+        borderRadius: 3,
+    },
+    productionButton: {
+        backgroundColor: "#4CAF50",
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 6,
+        alignItems: "center",
+        marginBottom: 12,
+    },
+    productionButtonText: {
+        color: "white",
+        fontSize: 12,
+        fontWeight: "600",
     },
     actionButtons: {
         flexDirection: "row",
@@ -832,6 +1186,17 @@ const styles = StyleSheet.create({
     },
     picker: {
         height: 50,
+    },
+    hewanInfo: {
+        backgroundColor: "#F0F8FF",
+        padding: 10,
+        borderRadius: 8,
+        marginBottom: 12,
+    },
+    hewanInfoText: {
+        fontSize: 12,
+        color: "#1E3A3A",
+        marginBottom: 2,
     },
     modalButtons: {
         flexDirection: "row",
