@@ -22,21 +22,94 @@ type Kandang = {
     kapasitas: number;
     jumlah_hewan: number;
     jenis_hewan: string;
+    Hasil_Produksi: string;
+    Jml_produksi: number;
+    foto_hasil: string;
     keterangan: string;
 };
 
-const JENIS_HEWAN_OPTIONS = [
-    "Ayam",
-    "Bebek",
-    "Angsa",
-    "Kambing",
-    "Domba", 
-    "Sapi",
-    "Kerbau",
-    "Babi",
-    "Kelinci",
-    "Puyuh",
-    "Lainnya"
+// Dummy data untuk hewan sesuai dengan struktur database
+const HEWAN_OPTIONS = [
+    {
+        nama: "Ayam Petelur",
+        varietas: "Ayam Ras Petelur",
+        lama_panen: "1–2 Hari",
+        Hasil_Produksi: "Telur",
+        min_produksi: 50,
+        max_produksi: 200
+    },
+    {
+        nama: "Ayam Pedaging",
+        varietas: "Ayam Broiler",
+        lama_panen: "30–40 Hari",
+        Hasil_Produksi: "Daging",
+        min_produksi: 1,
+        max_produksi: 3
+    },
+    {
+        nama: "Lele",
+        varietas: "Lele Sangkuriang",
+        lama_panen: "60–80 Hari",
+        Hasil_Produksi: "Ikan",
+        min_produksi: 100,
+        max_produksi: 500
+    },
+    {
+        nama: "Bebek Petelur",
+        varietas: "Bebek Mojosari",
+        lama_panen: "1–2 Hari",
+        Hasil_Produksi: "Telur Bebek",
+        min_produksi: 30,
+        max_produksi: 100
+    },
+    {
+        nama: "Puyuh",
+        varietas: "Puyuh Lokal",
+        lama_panen: "1–2 Hari",
+        Hasil_Produksi: "Telur Puyuh",
+        min_produksi: 80,
+        max_produksi: 150
+    },
+    {
+        nama: "Kambing",
+        varietas: "Kambing Peranakan Etawa",
+        lama_panen: "180–240 Hari",
+        Hasil_Produksi: "Susu",
+        min_produksi: 1,
+        max_produksi: 3
+    },
+    {
+        nama: "Sapi Perah",
+        varietas: "Friesian Holstein",
+        lama_panen: "1–2 Hari",
+        Hasil_Produksi: "Susu Sapi",
+        min_produksi: 15,
+        max_produksi: 25
+    },
+    {
+        nama: "Ikan Nila",
+        varietas: "Nila Merah",
+        lama_panen: "120–150 Hari",
+        Hasil_Produksi: "Ikan",
+        min_produksi: 80,
+        max_produksi: 300
+    },
+    {
+        nama: "Ikan Gurame",
+        varietas: "Gurame Soang",
+        lama_panen: "180–240 Hari",
+        Hasil_Produksi: "Ikan",
+        min_produksi: 20,
+        max_produksi: 50
+    },
+    {
+        nama: "tes",
+        varietas: "tes",
+        lama_panen: "0",
+        Hasil_Produksi: "daging",
+        min_produksi: 10,
+        max_produksi: 20
+    }
 ];
 
 export default function KandangScreen() {
@@ -54,7 +127,7 @@ export default function KandangScreen() {
     const [keterangan, setKeterangan] = useState("");
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [saving, setSaving] = useState(false);
-    const [deletingId, setDeletingId] = useState<number | null>(null); // TAMBAHAN: State untuk tracking delete
+    const [deletingId, setDeletingId] = useState<number | null>(null);
 
     const fetchData = async () => {
         setLoading(true);
@@ -97,16 +170,28 @@ export default function KandangScreen() {
         if (!jenisHewan) {
             return Alert.alert("Error", "Jenis hewan harus dipilih");
         }
+        if (!keterangan.trim()) {
+            return Alert.alert("Error", "Keterangan harus diisi");
+        }
         if (parseInt(jumlahHewan) > parseInt(kapasitas)) {
             return Alert.alert("Error", "Jumlah hewan tidak boleh melebihi kapasitas");
         }
 
+        const hewanInfo = HEWAN_OPTIONS.find(h => h.nama === jenisHewan);
+        if (!hewanInfo) {
+            return Alert.alert("Error", "Jenis hewan tidak valid");
+        }
+
+        // Sesuaikan payload dengan struktur database dan controller
         const payload = {
             nm_kandang: nmKandang.trim(),
             kapasitas: parseInt(kapasitas),
             jumlah_hewan: parseInt(jumlahHewan),
             jenis_hewan: jenisHewan,
-            keterangan: keterangan.trim() || "",
+            Hasil_Produksi: hewanInfo.Hasil_Produksi, // Perhatikan huruf besar
+            Jml_produksi: 0, // Mulai dari 0, sesuai dengan nullable di controller
+            foto_hasil: "", // Default empty string
+            keterangan: keterangan.trim()
         };
 
         console.log("Payload:", payload);
@@ -167,119 +252,49 @@ export default function KandangScreen() {
         setModalVisible(true);
     };
 
-    // PERBAIKAN: Fungsi delete yang sudah diperbaiki dengan lebih banyak logging
-    const handleDelete = (id_kandang: number) => {
-        console.log("=== HANDLE DELETE CALLED ===");
-        console.log("ID Kandang:", id_kandang);
-        console.log("API_URLS.KANDANG:", API_URLS.KANDANG);
-        
+    const handleDelete = async (id_kandang: number) => {
         Alert.alert(
             "Konfirmasi Hapus",
             "Apakah Anda yakin ingin menghapus kandang ini?",
             [
-                { 
-                    text: "Batal", 
-                    style: "cancel",
-                    onPress: () => console.log("Delete cancelled")
-                },
+                { text: "Batal", style: "cancel" },
                 {
                     text: "Hapus",
                     style: "destructive",
-                    onPress: async () => {
-                        console.log("=== DELETE CONFIRMED ===");
-                        
-                        try {
-                            setDeletingId(id_kandang);
-                            console.log("DeletingId set to:", id_kandang);
-                            
-                            const deleteUrl = `${API_URLS.KANDANG}/${id_kandang}`;
-                            console.log("Delete URL:", deleteUrl);
-
-                            const response = await fetch(deleteUrl, {
-                                method: "DELETE",
-                                headers: {
-                                    "Accept": "application/json",
-                                    "Content-Type": "application/json"
-                                },
-                            });
-
-                            console.log("Response received - Status:", response.status);
-                            console.log("Response OK:", response.ok);
-                            console.log("Response headers:", response.headers);
-
-                            if (response.ok) {
-                                console.log("=== DELETE SUCCESS ===");
-                                
-                                let responseData = null;
-                                const contentType = response.headers.get("content-type");
-                                console.log("Content-Type:", contentType);
-                                
-                                try {
-                                    const text = await response.text();
-                                    console.log("Response text:", text);
-                                    
-                                    if (text) {
-                                        responseData = JSON.parse(text);
-                                        console.log("Parsed response:", responseData);
-                                    }
-                                } catch (parseError) {
-                                    console.log("Parse error (OK jika response kosong):", parseError);
-                                }
-                                
-                                Alert.alert(
-                                    "Sukses", 
-                                    responseData?.message || "Data kandang berhasil dihapus",
-                                    [
-                                        {
-                                            text: "OK",
-                                            onPress: () => console.log("Alert closed")
-                                        }
-                                    ]
-                                );
-                                
-                                console.log("Calling fetchData...");
-                                await fetchData();
-                                console.log("fetchData completed");
-                                
-                            } else {
-                                console.log("=== DELETE FAILED ===");
-                                let errorMessage = `Gagal menghapus data. Status: ${response.status}`;
-                                
-                                try {
-                                    const errorText = await response.text();
-                                    console.log("Error response text:", errorText);
-                                    
-                                    if (errorText) {
-                                        const errorData = JSON.parse(errorText);
-                                        console.log("Parsed error:", errorData);
-                                        errorMessage = errorData.message || errorMessage;
-                                    }
-                                } catch (parseError) {
-                                    console.log("Could not parse error response:", parseError);
-                                }
-                                
-                                Alert.alert("Error", errorMessage);
-                            }
-                        } catch (error: any) {
-                            console.log("=== DELETE EXCEPTION ===");
-                            console.error("Error type:", typeof error);
-                            console.error("Error name:", error.name);
-                            console.error("Error message:", error.message);
-                            console.error("Full error:", error);
-                            
-                            Alert.alert(
-                                "Error", 
-                                `Terjadi kesalahan: ${error.message || "Unknown error"}`
-                            );
-                        } finally {
-                            console.log("=== DELETE FINALLY ===");
-                            setDeletingId(null);
-                            console.log("DeletingId reset to null");
-                        }
-                    },
+                    onPress: () => deleteKandang(id_kandang),
                 },
             ]
         );
+    };
+
+    const deleteKandang = async (id_kandang: number) => {
+        try {
+            setDeletingId(id_kandang);
+
+            const response = await fetch(`${API_URLS.KANDANG}/${id_kandang}`, {
+                method: "DELETE",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                },
+            });
+
+            console.log("Delete response status:", response.status);
+            const responseData = await response.json();
+            console.log("Delete response data:", responseData);
+
+            if (response.ok) {
+                await fetchData();
+                Alert.alert("Sukses", "Data berhasil dihapus");
+            } else {
+                throw new Error(responseData.message || `Error ${response.status}`);
+            }
+        } catch (error: any) {
+            console.error("Delete error:", error);
+            Alert.alert("Error", error.message || "Gagal menghapus data");
+        } finally {
+            setDeletingId(null);
+        }
     };
 
     const getPercentage = (current: number, max: number) => {
@@ -309,7 +324,8 @@ export default function KandangScreen() {
         const percentage = getPercentage(item.jumlah_hewan, item.kapasitas);
         const isOvercrowded = percentage >= 90;
         const isAlmostFull = percentage >= 75 && percentage < 90;
-        const isDeleting = deletingId === item.id_kandang; // TAMBAHAN: Check if this item is being deleted
+        const isDeleting = deletingId === item.id_kandang;
+        const hewanInfo = HEWAN_OPTIONS.find(h => h.nama === item.jenis_hewan);
 
         return (
             <View style={[styles.kandangCard, isDeleting && styles.cardDeleting]}>
@@ -317,6 +333,10 @@ export default function KandangScreen() {
                     <View style={styles.kandangInfo}>
                         <Text style={styles.kandangName}>{item.nm_kandang}</Text>
                         <Text style={styles.kandangJenis}>🐾 {item.jenis_hewan}</Text>
+                        {hewanInfo && (
+                            <Text style={styles.kandangVarietas}>{hewanInfo.varietas}</Text>
+                        )}
+                        <Text style={styles.kandangProduksi}>📦 {item.Hasil_Produksi}: {item.Jml_produksi}</Text>
                         {item.keterangan && (
                             <Text style={styles.kandangKeterangan}>📝 {item.keterangan}</Text>
                         )}
@@ -382,15 +402,6 @@ export default function KandangScreen() {
             <View style={styles.container}>
                 {/* Top Navigation Bar */}
                 <View style={styles.topNavContainer}>
-                    <TouchableOpacity
-                        style={styles.navButton}
-                        onPress={() => router.push({
-                            pathname: "/(tabs)/ternak/hewan" as any,
-                            params: { gmail, nama },
-                        })}
-                    >
-                        <Text style={styles.navText}>Hewan</Text>
-                    </TouchableOpacity>
                     <TouchableOpacity style={[styles.navButton, styles.navButtonActive]}>
                         <Text style={[styles.navText, styles.navTextActive]}>Kandang</Text>
                     </TouchableOpacity>
@@ -456,7 +467,7 @@ export default function KandangScreen() {
                                 {selectedId ? "Edit Data Kandang" : "Tambah Data Kandang"}
                             </Text>
 
-                            <ScrollView 
+                            <ScrollView
                                 showsVerticalScrollIndicator={false}
                                 style={styles.modalScrollView}
                             >
@@ -494,17 +505,17 @@ export default function KandangScreen() {
                                         style={styles.picker}
                                     >
                                         <Picker.Item label="Pilih Jenis Hewan" value="" />
-                                        {JENIS_HEWAN_OPTIONS.map((jenis, index) => (
-                                            <Picker.Item 
-                                                key={index} 
-                                                label={jenis} 
-                                                value={jenis} 
+                                        {HEWAN_OPTIONS.map((hewan, index) => (
+                                            <Picker.Item
+                                                key={index}
+                                                label={`${hewan.nama} - ${hewan.lama_panen}`}
+                                                value={hewan.nama}
                                             />
                                         ))}
                                     </Picker>
                                 </View>
 
-                                <Text style={styles.inputLabel}>Keterangan (opsional)</Text>
+                                <Text style={styles.inputLabel}>Keterangan *</Text>
                                 <TextInput
                                     placeholder="Masukkan keterangan tambahan"
                                     style={[styles.input, styles.textArea]}
@@ -676,6 +687,17 @@ const styles = StyleSheet.create({
         color: "#666",
         marginBottom: 2,
     },
+    kandangVarietas: {
+        fontSize: 12,
+        color: "#888",
+        marginBottom: 2,
+        fontStyle: 'italic',
+    },
+    kandangProduksi: {
+        fontSize: 14,
+        color: "#666",
+        marginBottom: 2,
+    },
     kandangKeterangan: {
         fontSize: 12,
         color: "#999",
@@ -771,7 +793,7 @@ const styles = StyleSheet.create({
         maxHeight: "80%",
     },
     modalScrollView: {
-        maxHeight: 400,
+        maxHeight: 500,
     },
     modalTitle: {
         fontSize: 20,

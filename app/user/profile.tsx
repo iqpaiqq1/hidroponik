@@ -9,9 +9,11 @@ import {
     Alert,
     Modal,
     ActivityIndicator,
+    Image,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as ImagePicker from 'expo-image-picker';
 import {
     ArrowLeft,
     Edit3,
@@ -21,16 +23,21 @@ import {
     Eye,
     EyeOff,
     CheckCircle,
+    Camera,
+    Upload,
 } from "lucide-react-native";
 import { useLanguage } from "./contexts/LanguageContext";
 import { useTheme } from "./contexts/ThemeContext";
 import { API_URLS } from "../api/apiConfig";
 
 interface UserData {
+    id: string;
     nama: string;
+    username: string;
     gmail: string;
     role: string;
     password?: string;
+    profile_picture?: string;
 }
 
 export default function ProfileScreen() {
@@ -47,20 +54,34 @@ export default function ProfileScreen() {
         newPassword: "",
         confirmPassword: "",
     });
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [logoutLoading, setLogoutLoading] = useState(false);
+    const [showImageOptions, setShowImageOptions] = useState(false);
 
-    // Cek dari mana user datang ke profile
     const fromDashboard = params.from === "dashboard";
     const fromSettings = params.from === "settings";
 
     useEffect(() => {
         loadUserData();
+        requestPermissions();
     }, []);
+
+    const requestPermissions = async () => {
+        const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
+        const { status: libraryStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+        if (cameraStatus !== 'granted' || libraryStatus !== 'granted') {
+            Alert.alert(
+                'Permissions Required',
+                'Camera and photo library permissions are needed to change profile picture.'
+            );
+        }
+    };
 
     const loadUserData = async () => {
         try {
@@ -75,29 +96,27 @@ export default function ProfileScreen() {
                     newPassword: "",
                     confirmPassword: "",
                 });
+                if (parsed.profile_picture) {
+                    setSelectedImage(parsed.profile_picture);
+                }
             }
         } catch (error) {
             console.error("Error loading user data:", error);
         }
     };
 
-    // Fungsi back yang pintar
     const handleBack = () => {
         if (fromDashboard) {
-            // Kembali ke dashboard
             router.push("/user/dashboardUser");
         } else if (fromSettings) {
-            // Kembali ke settings
             router.push("/user/settings");
         } else {
-            // Default: kembali ke halaman sebelumnya
             router.back();
         }
     };
 
     const handleEditToggle = () => {
         if (isEditing) {
-            // Cancel editing - reset to original user data
             setEditData({
                 nama: userData?.nama || "",
                 gmail: userData?.gmail || "",
@@ -105,11 +124,109 @@ export default function ProfileScreen() {
                 newPassword: "",
                 confirmPassword: "",
             });
+            setSelectedImage(userData?.profile_picture || null);
         }
         setIsEditing(!isEditing);
     };
 
+    const pickImageFromCamera = async () => {
+        try {
+            const result = await ImagePicker.launchCameraAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.5,
+            });
+
+            if (!result.canceled && result.assets[0]) {
+                setSelectedImage(result.assets[0].uri);
+                setShowImageOptions(false);
+            }
+        } catch (error) {
+            console.error("Error picking image from camera:", error);
+            Alert.alert("Error", "Failed to open camera");
+        }
+    };
+
+    const pickImageFromGallery = async () => {
+        try {
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.5,
+            });
+
+            if (!result.canceled && result.assets[0]) {
+                setSelectedImage(result.assets[0].uri);
+                setShowImageOptions(false);
+            }
+        } catch (error) {
+            console.error("Error picking image from gallery:", error);
+            Alert.alert("Error", "Failed to open gallery");
+        }
+    };
+
+    const uploadProfilePicture = async (imageUri: string, userId: string): Promise<string | null> => {
+        try {
+            console.log('=== START UPLOAD PROFILE PICTURE ===');
+            console.log('Image URI:', imageUri);
+            console.log('User ID:', userId);
+
+            const formData = new FormData();
+            const uriParts = imageUri.split('.');
+            const fileType = uriParts[uriParts.length - 1];
+
+            formData.append('profile_picture', {
+                uri: imageUri,
+                name: `profile_${userId}.${fileType}`,
+                type: `image/${fileType}`,
+            } as any);
+
+            formData.append('id_user', userId);
+
+            const uploadUrl = `${API_URLS.USER}/upload-profile-picture`;
+            console.log('Upload URL:', uploadUrl);
+
+            console.log('Sending upload request...');
+            const response = await fetch(uploadUrl, {
+                method: 'POST',
+                body: formData,
+            });
+
+            console.log('Upload response status:', response.status);
+            console.log('Upload response headers:', response.headers);
+
+            const contentType = response.headers.get("content-type");
+            console.log('Content-Type:', contentType);
+
+            const responseText = await response.text();
+            console.log('Raw response:', responseText);
+
+            if (!contentType || !contentType.includes("application/json")) {
+                console.error("Non-JSON response received");
+                throw new Error("Server returned non-JSON response");
+            }
+
+            const data = JSON.parse(responseText);
+            console.log('Parsed upload data:', data);
+
+            if (response.ok && data.success) {
+                console.log('Upload successful, path:', data.data?.profile_picture);
+                return data.data?.profile_picture || null;
+            } else {
+                throw new Error(data.message || 'Failed to upload image');
+            }
+        } catch (error) {
+            console.error("=== ERROR UPLOADING PROFILE PICTURE ===");
+            console.error("Error details:", error);
+            throw error;
+        }
+    };
+
     const handleSave = async () => {
+        console.log('=== START HANDLE SAVE ===');
+
         if (!editData.nama.trim() || !editData.gmail.trim()) {
             Alert.alert("Error", "Please fill in all required fields");
             return;
@@ -126,37 +243,124 @@ export default function ProfileScreen() {
         }
 
         setLoading(true);
+        console.log('Loading state set to true');
 
         try {
-            // Simulate API call to update user data
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            let profilePictureUrl: string | null | undefined = userData?.profile_picture;
+            console.log('Initial profile picture:', profilePictureUrl);
+            console.log('Selected image:', selectedImage);
+            console.log('User data profile picture:', userData?.profile_picture);
 
-            // Create updated user object dengan type yang tepat
-            const updatedUser: UserData = {
+            // Upload profile picture if changed
+            if (selectedImage && selectedImage !== userData?.profile_picture) {
+                console.log('Image changed, uploading new image...');
+                try {
+                    const uploadedPath = await uploadProfilePicture(selectedImage, userData!.id);
+                    console.log('Upload completed, path:', uploadedPath);
+                    if (uploadedPath) {
+                        profilePictureUrl = uploadedPath;
+                    }
+                } catch (uploadError) {
+                    console.error("Failed to upload image:", uploadError);
+                    Alert.alert("Warning", "Failed to upload profile picture, but will save other changes");
+                }
+            } else {
+                console.log('No image change detected');
+            }
+
+            // Prepare update data
+            const updateData: any = {
                 nama: editData.nama,
                 gmail: editData.gmail,
-                role: userData?.role || "user", // Default role jika tidak ada
-                ...(editData.newPassword && { password: editData.newPassword }),
             };
 
-            await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
-            setUserData(updatedUser);
-            setIsEditing(false);
-            setShowSuccessModal(true);
+            if (editData.newPassword) {
+                updateData.password = editData.newPassword;
+                console.log('Password will be updated');
+            }
 
-            // Reset password fields
-            setEditData(prev => ({
-                ...prev,
-                currentPassword: "",
-                newPassword: "",
-                confirmPassword: "",
-            }));
+            if (profilePictureUrl) {
+                updateData.profile_picture = profilePictureUrl;
+            }
 
+            console.log('Update data:', JSON.stringify(updateData, null, 2));
+
+            const updateUrl = `${API_URLS.USER}/${userData?.id}`;
+            console.log('Update URL:', updateUrl);
+
+            console.log('Sending update request...');
+            const response = await fetch(updateUrl, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify(updateData),
+            });
+
+            console.log('Update response status:', response.status);
+            console.log('Update response headers:', response.headers);
+
+            const contentType = response.headers.get("content-type");
+            console.log('Content-Type:', contentType);
+
+            const responseText = await response.text();
+            console.log('Raw update response:', responseText);
+
+            if (!contentType || !contentType.includes("application/json")) {
+                console.error("Non-JSON response from update");
+                throw new Error("Server returned non-JSON response");
+            }
+
+            const data = JSON.parse(responseText);
+            console.log('Parsed update data:', data);
+
+            if (response.ok) {
+                console.log('Update successful!');
+
+                // Update local storage
+                const updatedUser: UserData = {
+                    ...userData!,
+                    nama: editData.nama,
+                    gmail: editData.gmail,
+                    profile_picture: profilePictureUrl || userData?.profile_picture,
+                };
+
+                console.log('Saving to AsyncStorage:', updatedUser);
+                await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
+
+                setUserData(updatedUser);
+                setIsEditing(false);
+                setShowSuccessModal(true);
+
+                // Reset password fields
+                setEditData(prev => ({
+                    ...prev,
+                    currentPassword: "",
+                    newPassword: "",
+                    confirmPassword: "",
+                }));
+
+                console.log('Save completed successfully!');
+            } else {
+                console.error('Update failed:', data.message);
+                Alert.alert("Error", data.message || "Failed to save changes");
+            }
         } catch (error) {
-            console.error("Error saving user data:", error);
-            Alert.alert("Error", "Failed to save changes");
+            console.error("=== ERROR IN HANDLE SAVE ===");
+            console.error("Error type:", typeof error);
+            console.error("Error details:", error);
+            console.error("Error message:", error instanceof Error ? error.message : 'Unknown error');
+            console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
+
+            Alert.alert(
+                "Error",
+                error instanceof Error ? error.message : "Failed to save changes. Please check your connection."
+            );
         } finally {
+            console.log('Setting loading to false');
             setLoading(false);
+            console.log('=== END HANDLE SAVE ===');
         }
     };
 
@@ -175,16 +379,11 @@ export default function ProfileScreen() {
                     onPress: async () => {
                         setLogoutLoading(true);
                         try {
-                            // Call logout API
                             const res = await fetch(API_URLS.LOGOUT, { method: "GET" });
 
                             if (res.ok) {
-                                // Clear local storage
                                 await AsyncStorage.removeItem("user");
-
-                                // Redirect to login page
                                 router.replace("/");
-
                                 Alert.alert("Success", "Logout Berhasil!");
                             } else {
                                 Alert.alert("Error", "Gagal Logout");
@@ -216,17 +415,11 @@ export default function ProfileScreen() {
         <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity
-                    onPress={handleBack}
-                    style={styles.backButton}
-                >
+                <TouchableOpacity onPress={handleBack} style={styles.backButton}>
                     <ArrowLeft size={24} color={colors.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{t("myProfile")}</Text>
-                <TouchableOpacity
-                    onPress={handleEditToggle}
-                    style={styles.editButton}
-                >
+                <TouchableOpacity onPress={handleEditToggle} style={styles.editButton}>
                     {isEditing ? (
                         <X size={24} color={colors.text} />
                     ) : (
@@ -238,10 +431,27 @@ export default function ProfileScreen() {
             <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
                 {/* Profile Card */}
                 <View style={styles.profileCard}>
-                    <View style={styles.avatarContainer}>
-                        <Text style={styles.avatarText}>
-                            {userData.nama.substring(0, 2).toUpperCase()}
-                        </Text>
+                    <View style={styles.avatarWrapper}>
+                        {selectedImage ? (
+                            <Image
+                                source={{ uri: selectedImage }}
+                                style={styles.avatarImage}
+                            />
+                        ) : (
+                            <View style={styles.avatarContainer}>
+                                <Text style={styles.avatarText}>
+                                    {userData.nama.substring(0, 2).toUpperCase()}
+                                </Text>
+                            </View>
+                        )}
+                        {isEditing && (
+                            <TouchableOpacity
+                                style={styles.cameraButton}
+                                onPress={() => setShowImageOptions(true)}
+                            >
+                                <Camera size={18} color="#fff" />
+                            </TouchableOpacity>
+                        )}
                     </View>
                     <Text style={styles.username}>{userData.nama}</Text>
                     <Text style={styles.userEmail}>{userData.gmail}</Text>
@@ -258,10 +468,7 @@ export default function ProfileScreen() {
                     <View style={styles.inputGroup}>
                         <Text style={styles.inputLabel}>{t("fullName")}</Text>
                         <TextInput
-                            style={[
-                                styles.textInput,
-                                !isEditing && styles.disabledInput
-                            ]}
+                            style={[styles.textInput, !isEditing && styles.disabledInput]}
                             value={editData.nama}
                             onChangeText={(text) => setEditData(prev => ({ ...prev, nama: text }))}
                             placeholder="Enter your full name"
@@ -274,10 +481,7 @@ export default function ProfileScreen() {
                     <View style={styles.inputGroup}>
                         <Text style={styles.inputLabel}>{t("email")}</Text>
                         <TextInput
-                            style={[
-                                styles.textInput,
-                                !isEditing && styles.disabledInput
-                            ]}
+                            style={[styles.textInput, !isEditing && styles.disabledInput]}
                             value={editData.gmail}
                             onChangeText={(text) => setEditData(prev => ({ ...prev, gmail: text }))}
                             placeholder="Enter your email"
@@ -288,7 +492,7 @@ export default function ProfileScreen() {
                         />
                     </View>
 
-                    {/* Role Display (Read-only) */}
+                    {/* Role Display */}
                     <View style={styles.inputGroup}>
                         <Text style={styles.inputLabel}>{t("role")}</Text>
                         <TextInput
@@ -300,7 +504,7 @@ export default function ProfileScreen() {
                         />
                     </View>
 
-                    {/* Password Section - Only show when editing */}
+                    {/* Password Section */}
                     {isEditing && (
                         <>
                             <View style={styles.passwordSection}>
@@ -424,6 +628,43 @@ export default function ProfileScreen() {
                 <View style={{ height: 40 }} />
             </ScrollView>
 
+            {/* Image Options Modal */}
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={showImageOptions}
+                onRequestClose={() => setShowImageOptions(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.imageOptionsModal}>
+                        <Text style={styles.modalTitle}>Change Profile Picture</Text>
+
+                        <TouchableOpacity
+                            style={styles.imageOptionButton}
+                            onPress={pickImageFromCamera}
+                        >
+                            <Camera size={24} color={colors.primary} />
+                            <Text style={styles.imageOptionText}>Take Photo</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.imageOptionButton}
+                            onPress={pickImageFromGallery}
+                        >
+                            <Upload size={24} color={colors.primary} />
+                            <Text style={styles.imageOptionText}>Choose from Gallery</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.cancelButton}
+                            onPress={() => setShowImageOptions(false)}
+                        >
+                            <Text style={styles.cancelButtonText}>Cancel</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
             {/* Success Modal */}
             <Modal
                 animationType="fade"
@@ -507,6 +748,10 @@ const createStyles = (colors: any, isDark: boolean) => StyleSheet.create({
         shadowOpacity: isDark ? 0 : 0.1,
         shadowRadius: 4,
     },
+    avatarWrapper: {
+        position: "relative",
+        marginBottom: 15,
+    },
     avatarContainer: {
         width: 80,
         height: 80,
@@ -514,12 +759,29 @@ const createStyles = (colors: any, isDark: boolean) => StyleSheet.create({
         backgroundColor: colors.primary,
         justifyContent: "center",
         alignItems: "center",
-        marginBottom: 15,
+    },
+    avatarImage: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
     },
     avatarText: {
         color: "#fff",
         fontSize: 32,
         fontWeight: "700",
+    },
+    cameraButton: {
+        position: "absolute",
+        bottom: 0,
+        right: 0,
+        backgroundColor: colors.primary,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        justifyContent: "center",
+        alignItems: "center",
+        borderWidth: 3,
+        borderColor: colors.card,
     },
     username: {
         fontSize: 20,
@@ -637,6 +899,46 @@ const createStyles = (colors: any, isDark: boolean) => StyleSheet.create({
         alignItems: "center",
         backgroundColor: "rgba(0, 0, 0, 0.5)",
         padding: 20,
+    },
+    imageOptionsModal: {
+        backgroundColor: colors.card,
+        borderRadius: 20,
+        padding: 20,
+        width: "100%",
+        maxWidth: 400,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: colors.text,
+        marginBottom: 20,
+        textAlign: "center",
+    },
+    imageOptionButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: isDark ? colors.border : "#f5f5f5",
+        padding: 15,
+        borderRadius: 12,
+        marginBottom: 10,
+        gap: 12,
+    },
+    imageOptionText: {
+        fontSize: 16,
+        color: colors.text,
+        fontWeight: "500",
+    },
+    cancelButton: {
+        backgroundColor: isDark ? "#2A1A1A" : "#FEE2E2",
+        padding: 15,
+        borderRadius: 12,
+        marginTop: 10,
+        alignItems: "center",
+    },
+    cancelButtonText: {
+        fontSize: 16,
+        color: colors.error,
+        fontWeight: "600",
     },
     successModal: {
         backgroundColor: colors.card,

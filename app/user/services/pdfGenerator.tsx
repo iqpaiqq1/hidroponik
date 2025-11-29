@@ -1,4 +1,5 @@
-const RNHTMLtoPDF = require('react-native-html-to-pdf').default || require('react-native-html-to-pdf');
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
 
 export interface PDFOptions {
   html: string;
@@ -11,11 +12,10 @@ export class PDFService {
     try {
       const { html, fileName, directory } = options;
 
-      const pdf = await RNHTMLtoPDF.convert({
+      const pdf = await Print.printToFileAsync({
         html,
-        fileName,
-        directory: directory || 'Documents',
       });
+
 
       return pdf;
     } catch (error) {

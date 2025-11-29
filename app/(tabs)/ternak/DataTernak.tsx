@@ -220,15 +220,6 @@ export default function DataTernak() {
           <TouchableOpacity
             style={styles.navButton}
             onPress={() => router.push({
-              pathname: "/(tabs)/ternak/DataTernak",
-              params: { gmail, nama },
-            })}
-          >
-            <Text style={styles.navText}>Hewan</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.navButton}
-            onPress={() => router.push({
               pathname: "/(tabs)/ternak/kandang",
               params: { gmail, nama },
             })}
