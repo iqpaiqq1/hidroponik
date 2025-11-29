@@ -38,30 +38,46 @@ export default function CountdownScreen() {
     const calculateCountdown = (tglTanam: string, lamaPanen: string): CountdownData | null => {
         try {
             const plantDate = new Date(tglTanam);
-            const daysToHarvest = parseInt(lamaPanen.replace(/\D/g, ""));
+
+            // Ambil angka pertama saja dari format "25–30 Hari" atau "25-30 Hari"
+            const match = lamaPanen.match(/\d+/);
+            if (!match) return null;
+            const daysToHarvest = parseInt(match[0]); // Ambil angka pertama (misal: 25 dari "25-30")
+
+            // Hitung target date
             const targetDate = new Date(plantDate);
             targetDate.setDate(targetDate.getDate() + daysToHarvest);
 
+            // Hitung hari yang sudah berlalu sejak tanam
             const today = new Date();
-            const diffDays = Math.floor((today.getTime() - plantDate.getTime()) / (1000 * 60 * 60 * 24));
-            const daysRemaining = targetDate > today
-                ? Math.max(0, Math.ceil((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)))
-                : -Math.abs(Math.floor((today.getTime() - targetDate.getTime()) / (1000 * 60 * 60 * 24)));
+            today.setHours(0, 0, 0, 0); // Reset jam untuk konsistensi
+            const plantDateReset = new Date(plantDate);
+            plantDateReset.setHours(0, 0, 0, 0);
 
-            // Perhitungan persentase
+            const diffTime = today.getTime() - plantDateReset.getTime();
+            const daysPassed = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+            // Hitung hari tersisa
+            const daysRemaining = daysToHarvest - daysPassed;
+
+            // Perhitungan persentase berdasarkan hari yang sudah berlalu
             let percentage = 0;
-            if (diffDays < 0) percentage = 0;
-            else if (diffDays >= daysToHarvest) percentage = 100;
-            else percentage = Math.min(100, Math.floor((diffDays / daysToHarvest) * 100));
+            if (daysPassed < 0) {
+                percentage = 0; // Belum ditanam
+            } else if (daysPassed >= daysToHarvest) {
+                percentage = 100; // Sudah melewati masa panen
+            } else {
+                percentage = Math.min(100, Math.floor((daysPassed / daysToHarvest) * 100));
+            }
 
             // Tentukan status dan warna
             let statusText = "";
             let statusColor = "";
 
-            if (daysRemaining > 3 && percentage < 30) {
+            if (daysRemaining > 3) {
                 statusText = "Baru Ditanam";
                 statusColor = "#2196F3";
-            } else if (daysRemaining <= 3 && daysRemaining > 0) {
+            } else if (daysRemaining > 0 && daysRemaining <= 3) {
                 statusText = "Segera Panen";
                 statusColor = "#FF9800";
             } else if (daysRemaining === 0) {
