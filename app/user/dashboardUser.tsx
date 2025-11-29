@@ -189,102 +189,8 @@ export default function DashboardUser() {
                 lamaPanen: item.lama_panen || "-"
             };
 
-            const html = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <style>
-            body { 
-              font-family: Arial, sans-serif; 
-              padding: 20px; 
-              line-height: 1.6; 
-              color: #333;
-            }
-            .header { 
-              text-align: center; 
-              margin-bottom: 30px; 
-              border-bottom: 3px solid #4CAF50; 
-              padding-bottom: 20px; 
-            }
-            .title { 
-              color: #4CAF50; 
-              font-size: 28px; 
-              margin-bottom: 10px; 
-              font-weight: bold;
-            }
-            .subtitle {
-              color: #666;
-              font-size: 14px;
-            }
-            .section { 
-              margin-bottom: 25px; 
-            }
-            .section-title { 
-              color: #333; 
-              font-size: 20px; 
-              font-weight: bold; 
-              margin-bottom: 12px; 
-              border-left: 4px solid #4CAF50; 
-              padding-left: 12px; 
-            }
-            .card { 
-              background: #f9f9f9; 
-              padding: 15px; 
-              border-radius: 8px; 
-            }
-            .footer { 
-              text-align: center; 
-              margin-top: 40px; 
-              padding-top: 20px;
-              border-top: 2px solid #eee;
-              color: #888; 
-              font-size: 12px; 
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1 class="title">${detailData.nama}</h1>
-            <p class="subtitle">${isIndonesian ? 'Laporan Detail Tanaman Hidroponik' : 'Hydroponic Plant Detail Report'}</p>
-          </div>
 
-          <div class="section">
-            <h2 class="section-title">${isIndonesian ? 'Informasi Dasar' : 'Basic Information'}</h2>
-            <div class="card">
-              <p><strong>${isIndonesian ? 'Nama Tanaman' : 'Plant Name'}:</strong> ${item.nm_tanaman}</p>
-              <p><strong>${isIndonesian ? 'Varietas' : 'Variety'}:</strong> ${item.varietas || '-'}</p>
-              <p><strong>${isIndonesian ? 'Lokasi' : 'Location'}:</strong> ${item.lokasi || '-'}</p>
-              <p><strong>${isIndonesian ? 'Status' : 'Status'}:</strong> ${item.status || '-'}</p>
-            </div>
-          </div>
-
-          ${detailData.deskripsi ? `
-          <div class="section">
-            <h2 class="section-title">${isIndonesian ? 'Deskripsi' : 'Description'}</h2>
-            <div class="card">
-              <p>${detailData.deskripsi[language]}</p>
-            </div>
-          </div>
-          ` : ''}
-
-          <div class="footer">
-            <p>${isIndonesian ? 'Dibuat pada' : 'Generated on'} ${new Date().toLocaleDateString(isIndonesian ? 'id-ID' : 'en-US')}</p>
-            <p>AetherApp - Hydroponic Management System</p>
-          </div>
-        </body>
-        </html>
-        `;
-
-            const { uri } = await Print.printToFileAsync({ html });
-
-            const isAvailable = await Sharing.isAvailableAsync();
-            if (isAvailable) {
-                await Sharing.shareAsync(uri, {
-                    UTI: '.pdf',
-                    mimeType: 'application/pdf',
-                });
-            }
+          
         } catch (error) {
             console.error('Error generating PDF:', error);
             Alert.alert(
@@ -452,12 +358,8 @@ export default function DashboardUser() {
                                         )}
                                     </View>
                                 )}
-                                <TouchableOpacity
-                                    style={styles.downloadIcon}
-                                    onPress={() => handleDownloadItem(item)}
-                                >
-                                    <Download size={18} color={isDark ? "#fff" : "#333"} strokeWidth={2} />
-                                </TouchableOpacity>
+                            
+                               
                             </View>
 
                             <View style={styles.productInfo}>

@@ -243,181 +243,272 @@ export default function DetailTanamanScreen() {
     // Get detail data based on nama
     const detailData = tanamanDetailData[nama as string] || tanamanDetailData["Kangkung"];
 
-    const generateHTML = () => {
+   
+    const generateHTML = async () => {
         const isIndonesian = language === 'id';
+        const imageUrl = detailData.foto || "https://images.unsplash.com/photo-1622383563227-04401ab4e5ea?w=800";
+
+        // Convert image to base64
+        let base64Image = '';
+        try {
+            // Fetch image and convert to base64
+            const response = await fetch(imageUrl);
+            const blob = await response.blob();
+            const reader = new FileReader();
+
+            base64Image = await new Promise((resolve, reject) => {
+                reader.onloadend = () => {
+                    resolve(reader.result as string);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        } catch (error) {
+            console.error('Error loading image:', error);
+            // Use placeholder if image fails to load
+            base64Image = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjYwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iODAwIiBoZWlnaHQ9IjYwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5JbWFnZSBOb3QgQXZhaWxhYmxlPC90ZXh0Pjwvc3ZnPg==';
+        }
 
         return `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <style>
-            body { 
-              font-family: Arial, sans-serif; 
-              padding: 20px; 
-              line-height: 1.6; 
-              color: #333;
-            }
-            .header { 
-              text-align: center; 
-              margin-bottom: 30px; 
-              border-bottom: 3px solid #4CAF50; 
-              padding-bottom: 20px; 
-            }
-            .title { 
-              color: #4CAF50; 
-              font-size: 28px; 
-              margin-bottom: 10px; 
-              font-weight: bold;
-            }
-            .subtitle {
-              color: #666;
-              font-size: 14px;
-            }
-            .section { 
-              margin-bottom: 25px; 
-              page-break-inside: avoid;
-            }
-            .section-title { 
-              color: #333; 
-              font-size: 20px; 
-              font-weight: bold; 
-              margin-bottom: 12px; 
-              border-left: 4px solid #4CAF50; 
-              padding-left: 12px; 
-            }
-            .card { 
-              background: #f9f9f9; 
-              padding: 15px; 
-              border-radius: 8px; 
-              margin-bottom: 15px; 
-            }
-            .bullet-item { 
-              margin-bottom: 10px;
-              display: flex;
-            }
-            .bullet { 
-              color: #4CAF50;
-              margin-right: 8px;
-              font-weight: bold;
-            }
-            .step-item { 
-              margin-bottom: 15px; 
-            }
-            .step-title { 
-              font-weight: bold; 
-              color: #333; 
-              margin-bottom: 5px; 
-            }
-            .step-desc { 
-              color: #666; 
-              margin-left: 20px;
-            }
-            .bold { 
-              font-weight: bold; 
-              color: #333;
-            }
-            .footer { 
-              text-align: center; 
-              margin-top: 40px; 
-              padding-top: 20px;
-              border-top: 2px solid #eee;
-              color: #888; 
-              font-size: 12px; 
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1 class="title">${detailData.nama}</h1>
-            <p class="subtitle">${isIndonesian ? 'Laporan Detail Tanaman Hidroponik' : 'Hydroponic Plant Detail Report'}</p>
-          </div>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
 
-          <div class="section">
-            <h2 class="section-title">${isIndonesian ? 'Deskripsi' : 'Description'}</h2>
-            <div class="card">
-              <p>${detailData.deskripsi[language]}</p>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: "Helvetica", Arial, sans-serif;
+      padding: 45px 55px;
+      color: #222;
+      background: white;
+    }
+
+    /* LAYOUT HALAMAN */
+    .page {
+      page-break-after: always;
+      width: 100%;
+    }
+
+    /* HEADER */
+    .header {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+    .title {
+      font-size: 38px;
+      font-weight: bold;
+      color: #2E8B57;
+    }
+    .subtitle {
+      font-size: 18px;
+      color: #666;
+      margin-top: 6px;
+    }
+
+    .divider {
+      width: 100%;
+      height: 4px;
+      background: #2E8B57;
+      margin: 18px auto 25px auto;
+      border-radius: 6px;
+    }
+
+    /* IMAGE FULL WIDTH */
+    .image-wrapper {
+      display: flex;
+      justify-content: center;
+      margin: 0 auto 18px auto;
+      width: 100%;
+    }
+
+    .plant-image {
+      width: 100%;
+      max-height: 420px;
+      object-fit: cover;
+      border-radius: 20px;
+      box-shadow: 0 10px 18px rgba(0,0,0,0.25);
+    }
+
+    /* SECTION */
+    .section {
+      margin-bottom: 28px;
+      page-break-inside: avoid;
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      color: #222;
+    }
+    .bar {
+      width: 6px;
+      height: 20px;
+      background: #2E8B57;
+      border-radius: 4px;
+      margin-right: 12px;
+    }
+
+    .card {
+      background: #f8f8f8;
+      border-radius: 12px;
+      padding: 18px 20px;
+      border: 1px solid #e0e0e0;
+    }
+
+    .description-text {
+      font-size: 16px;
+      line-height: 1.75;
+      color: #444;
+    }
+
+    /* Bullet list */
+    .bullet-item {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+    .bullet {
+      color: #2E8B57;
+      font-size: 20px;
+      margin-right: 10px;
+      margin-top: -2px;
+    }
+    .bullet-text {
+      font-size: 16px;
+      color: #444;
+    }
+
+    /* Steps */
+    .step-item {
+      display: flex;
+      margin-bottom: 18px;
+    }
+    .step-number {
+      font-size: 18px;
+      font-weight: bold;
+      color: #2E8B57;
+      margin-right: 12px;
+    }
+    .step-desc {
+      font-size: 15px;
+      color: #555;
+      line-height: 1.6;
+    }
+
+  </style>
+</head>
+
+<body>
+
+  <!-- PAGE 1 → otomatis penuh, tidak ada space kosong -->
+  <div class="page">
+
+    <div class="header">
+      <div class="title">${detailData.nama}</div>
+      <div class="subtitle">
+        ${isIndonesian ? "Laporan Detail Tanaman Hidroponik" : "Hydroponic Plant Detail Report"}
+      </div>
+      <div class="divider"></div>
+    </div>
+
+    <div class="image-wrapper">
+      <img src="${base64Image}" class="plant-image" />
+    </div>
+
+    <!-- Jika masih ada space kosong → deskripsi naik ke halaman ini -->
+    <div class="section">
+      <div class="section-title">
+        <div class="bar"></div>
+        ${isIndonesian ? "Deskripsi" : "Description"}
+      </div>
+      <div class="card">
+        <div class="description-text">${detailData.deskripsi[language]}</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PAGE 2 -->
+  <div class="page">
+
+    <!-- KEUNGGULAN -->
+    <div class="section">
+      <div class="section-title">
+        <div class="bar"></div>
+        ${isIndonesian ? "Keunggulan" : "Advantages"}
+      </div>
+      <div class="card">
+        ${detailData.keunggulan[language].map((i: any) => `
+          <div class="bullet-item">
+            <div class="bullet">✓</div>
+            <div class="bullet-text">${i}</div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+
+    <!-- SYARAT TUMBUH -->
+    <div class="section">
+      <div class="section-title">
+        <div class="bar"></div>
+        ${isIndonesian ? "Syarat Tumbuh" : "Growth Conditions"}
+      </div>
+      <div class="card">
+        <div class="bullet-item"><b>pH:</b>&nbsp; ${detailData.syaratTumbuh.ph}</div>
+        <div class="bullet-item"><b>EC/TDS:</b>&nbsp; ${detailData.syaratTumbuh.ec}</div>
+        <div class="bullet-item"><b>Suhu:</b>&nbsp; ${detailData.syaratTumbuh.suhuIdeal}</div>
+        <div class="bullet-item"><b>Cahaya:</b>&nbsp; ${detailData.syaratTumbuh.cahaya}</div>
+        <div class="bullet-item"><b>Kelembapan:</b>&nbsp; ${detailData.syaratTumbuh.kelembapan}</div>
+      </div>
+    </div>
+
+    <!-- CARA PENANAMAN -->
+    <div class="section">
+      <div class="section-title">
+        <div class="bar"></div>
+        ${isIndonesian ? "Cara Penanaman" : "Planting Method"}
+      </div>
+      <div class="card">
+        ${detailData.caraPenanaman[language].map((step: any, index: number) => `
+          <div class="step-item">
+            <div class="step-number">${index + 1}.</div>
+            <div class="step-desc">
+              <b>${step.title}</b><br/>
+              ${step.desc}
             </div>
           </div>
+        `).join('')}
+      </div>
+    </div>
 
-          <div class="section">
-            <h2 class="section-title">${isIndonesian ? 'Keunggulan' : 'Advantages'}</h2>
-            <div class="card">
-              ${detailData.keunggulan[language].map((item: string) => `
-                <div class="bullet-item">
-                  <span class="bullet">✓</span> <span>${item}</span>
-                </div>
-              `).join('')}
-            </div>
-          </div>
+  </div>
 
-          <div class="section">
-            <h2 class="section-title">${isIndonesian ? 'Syarat Tumbuh' : 'Growth Requirements'}</h2>
-            <div class="card">
-              <div class="bullet-item">
-                <span class="bullet">•</span> 
-                <span>pH: <span class="bold">${detailData.syaratTumbuh.ph}</span></span>
-              </div>
-              <div class="bullet-item">
-                <span class="bullet">•</span> 
-                <span>EC/TDS: <span class="bold">${detailData.syaratTumbuh.ec}</span></span>
-              </div>
-              <div class="bullet-item">
-                <span class="bullet">•</span> 
-                <span>${isIndonesian ? 'Suhu Ideal' : 'Ideal Temperature'}: <span class="bold">${detailData.syaratTumbuh.suhuIdeal}</span></span>
-              </div>
-              <div class="bullet-item">
-                <span class="bullet">•</span> 
-                <span>${isIndonesian ? 'Cahaya' : 'Light'}: <span class="bold">${detailData.syaratTumbuh.cahaya}</span></span>
-              </div>
-              <div class="bullet-item">
-                <span class="bullet">•</span> 
-                <span>${isIndonesian ? 'Kelembapan' : 'Humidity'}: <span class="bold">${detailData.syaratTumbuh.kelembapan}</span></span>
-              </div>
-            </div>
-          </div>
+</body>
+</html>
+`;
 
-          <div class="section">
-            <h2 class="section-title">${isIndonesian ? 'Cara Penanaman' : 'Planting Method'}</h2>
-            <div class="card">
-              ${detailData.caraPenanaman[language].map((step: any, index: number) => `
-                <div class="step-item">
-                  <div class="step-title">${index + 1}. ${step.title}</div>
-                  <div class="step-desc">${step.desc}</div>
-                </div>
-              `).join('')}
-            </div>
-          </div>
 
-          <div class="section">
-            <h2 class="section-title">${isIndonesian ? 'Informasi Panen' : 'Harvest Information'}</h2>
-            <div class="card">
-              <div class="bullet-item">
-                <span class="bullet">⏱</span> 
-                <span>${isIndonesian ? 'Lama Panen' : 'Harvest Period'}: <span class="bold">${detailData.lamaPanen}</span></span>
-              </div>
-            </div>
-          </div>
 
-          <div class="footer">
-            <p>${isIndonesian ? 'Dibuat pada' : 'Generated on'} ${new Date().toLocaleDateString(isIndonesian ? 'id-ID' : 'en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        })}</p>
-            <p>AetherApp - Hydroponic Management System</p>
-          </div>
-        </body>
-        </html>
-      `;
     };
 
+    // Update fungsi handleDownloadPDF:
     const handleDownloadPDF = async () => {
         try {
             setIsGeneratingPDF(true);
 
-            const html = generateHTML();
-            const { uri } = await Print.printToFileAsync({ html });
+            // Generate HTML with embedded image
+            const html = await generateHTML();
+
+            const { uri } = await Print.printToFileAsync({
+                html,
+                width: 612, // Letter size width in points
+                height: 792, // Letter size height in points
+            });
 
             const isAvailable = await Sharing.isAvailableAsync();
             if (isAvailable) {
@@ -444,6 +535,7 @@ export default function DetailTanamanScreen() {
             setIsGeneratingPDF(false);
         }
     };
+
 
     const styles = createStyles(colors, isDark);
 
