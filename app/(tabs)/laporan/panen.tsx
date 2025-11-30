@@ -138,7 +138,7 @@ export default function LaporanScreen() {
                         style={styles.navButton}
                         onPress={() =>
                             router.push({
-                                pathname: "/(tabs)/laporan/pengiriman",
+                                pathname: "/(tabs)/laporan/pengirimanLaporan",
                                 params: { gmail, nama },
                             })
                         }

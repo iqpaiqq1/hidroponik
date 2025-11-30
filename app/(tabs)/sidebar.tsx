@@ -20,9 +20,11 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    View
+    View,
+    Alert
 } from "react-native";
 import { API_URLS } from "../api/apiConfig";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface MenuSidebarProps {
     activeMenu: string;
@@ -43,25 +45,76 @@ export default function MenuSidebar({ activeMenu, gmail, nama }: MenuSidebarProp
         return <AppLoading />;
     }
 
+    // ✅ FIX: Path yang lebih jelas dan konsisten
     const menus = [ 
         { label: "Dashboard", icon: LayoutGrid, path: "/dashboard" },
         { label: "Tanaman", icon: Leaf, path: "/(tabs)/tanaman/tanamanI" },
         { label: "Ternak", icon: Dog, path: "/(tabs)/ternak/DataTernak" },
         { label: "Sensor", icon: Cpu, path: "/(tabs)/sensor/sensorDashboard" },
         { label: "Laporan", icon: BarChart3, path: "/(tabs)/laporan/panen" },
-        { label: "Pengiriman", icon: Truck, path: "/(tabs)/pengiriman/pengiriman"},
+        // ✅ FIX 1: Ubah path pengiriman (pilih salah satu sesuai file structure lu)
+        { label: "Pengiriman", icon: Truck, path: "/(tabs)/pengiriman/pengirimanDashboard" }, // Pakai index.tsx
+        // ATAU kalau file lu namanya pengiriman.tsx:
+        // { label: "Pengiriman", icon: Truck, path: "/(tabs)/pengiriman/pengiriman" },
         { label: "Your Profile", icon: User, path: "/(tabs)/profile" },
     ];
 
+    // ✅ FIX 2: Logout yang lebih proper dengan clear AsyncStorage
     const handleLogout = async () => {
+        Alert.alert(
+            "Konfirmasi Logout",
+            "Apakah Anda yakin ingin keluar?",
+            [
+                {
+                    text: "Batal",
+                    style: "cancel"
+                },
+                {
+                    text: "Logout",
+                    onPress: async () => {
+                        try {
+                            // Panggil API logout
+                            const res = await fetch(API_URLS.LOGOUT, { 
+                                method: "POST", // ✅ Ubah dari GET ke POST (lebih standard)
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                }
+                            });
+                            
+                            if (res.ok) {
+                                // Clear AsyncStorage
+                                await AsyncStorage.removeItem("user");
+                                await AsyncStorage.removeItem("token");
+                                
+                                Alert.alert("Berhasil", "Logout berhasil!");
+                                router.replace("/"); // ✅ Pakai replace biar gak bisa back
+                            } else {
+                                Alert.alert("Gagal", "Gagal logout dari server");
+                            }
+                        } catch (error) {
+                            console.log("Logout error:", error);
+                            Alert.alert("Error", "Server tidak merespons");
+                        }
+                    },
+                    style: "destructive"
+                }
+            ]
+        );
+    };
+
+    // ✅ FIX 3: Handler menu dengan logging untuk debugging
+    const handleMenuPress = (item: any) => {
+        console.log('🔵 Menu clicked:', item.label);
+        console.log('🔵 Target path:', item.path);
+        
         try {
-            const res = await fetch(API_URLS.LOGOUT, { method: "GET" });
-            if (res.ok) {
-                alert("Logout Berhasil!");
-                router.push("/");
-            } else alert("Gagal Logout");
-        } catch {
-            alert("Server tidak merespons");
+            router.push({
+                pathname: item.path as any,
+                params: { gmail, nama },
+            });
+        } catch (error) {
+            console.log('🔴 Navigation error:', error);
+            Alert.alert("Error", `Gagal membuka ${item.label}`);
         }
     };
 
@@ -80,12 +133,7 @@ export default function MenuSidebar({ activeMenu, gmail, nama }: MenuSidebarProp
                 {menus.map((item) => (
                     <TouchableOpacity
                         key={item.label}
-                        onPress={() =>
-                            router.push({
-                                pathname: item.path as any,
-                                params: { gmail, nama },
-                            })
-                        }
+                        onPress={() => handleMenuPress(item)}
                         style={[
                             styles.menuItem,
                             activeMenu === item.label && styles.menuItemActive,
