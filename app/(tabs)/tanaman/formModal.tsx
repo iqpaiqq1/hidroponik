@@ -16,7 +16,6 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from 'expo-image-picker';
 import { Camera, ImageIcon } from "lucide-react-native";
 
-
 type FormDataType = {
     nm_tanaman: string;
     varietas: string;
@@ -56,7 +55,6 @@ const tanamanOptions = [
     { nama: "Mentimun", varietas: "Cucumber Mini Hidroponik", lama_panen: "40–50 Hari" },
     { nama: "Strawberry", varietas: "Strawberry Hidroponik", lama_panen: "60–90 Hari" },
 ];
-
 
 const statusOptions = ["Sehat", "Siap Panen", "Perlu Perhatian"];
 
@@ -100,7 +98,6 @@ export default function FormModal({
         }
     }, [initialData]);
 
-    // Request permission untuk kamera dan galeri
     const requestPermissions = async () => {
         if (Platform.OS !== 'web') {
             const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
@@ -117,7 +114,7 @@ export default function FormModal({
         return true;
     };
 
-    // Pilih foto dari galeri
+    // FIX: Pastikan base64 diaktifkan
     const pickImageFromGallery = async () => {
         const hasPermission = await requestPermissions();
         if (!hasPermission) return;
@@ -128,22 +125,22 @@ export default function FormModal({
                 allowsEditing: true,
                 aspect: [4, 3],
                 quality: 0.8,
-                base64: false,
-
+                base64: true, // ✅ PERBAIKAN: Aktifkan base64
             });
 
             if (!result.canceled && result.assets[0]) {
-                const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
-                setImageUri(result.assets[0].uri);
+                const asset = result.assets[0];
+                const base64Image = `data:image/jpeg;base64,${asset.base64}`;
+                setImageUri(asset.uri);
                 setFormData({ ...formData, Foto: base64Image });
+                console.log("✅ Foto berhasil dipilih dari galeri");
             }
         } catch (error) {
             Alert.alert('Error', 'Gagal memilih foto dari galeri');
-            console.error(error);
+            console.error("❌ Error pickImageFromGallery:", error);
         }
     };
 
-    // Ambil foto dari kamera
     const takePhoto = async () => {
         const hasPermission = await requestPermissions();
         if (!hasPermission) return;
@@ -157,25 +154,36 @@ export default function FormModal({
             });
 
             if (!result.canceled && result.assets[0]) {
-                const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
-                setImageUri(result.assets[0].uri);
+                const asset = result.assets[0];
+                const base64Image = `data:image/jpeg;base64,${asset.base64}`;
+                setImageUri(asset.uri);
                 setFormData({ ...formData, Foto: base64Image });
+                console.log("✅ Foto berhasil diambil dari kamera");
             }
         } catch (error) {
             Alert.alert('Error', 'Gagal mengambil foto dari kamera');
-            console.error(error);
+            console.error("❌ Error takePhoto:", error);
         }
     };
 
-    // Pilihan upload foto (Web)
     const pickImageWeb = (event: any) => {
         const file = event.target.files[0];
         if (file) {
+            // Validasi ukuran file (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                Alert.alert('Error', 'Ukuran file terlalu besar. Maksimal 5MB');
+                return;
+            }
+
             const reader = new FileReader();
             reader.onloadend = () => {
                 const base64String = reader.result as string;
                 setImageUri(base64String);
                 setFormData({ ...formData, Foto: base64String });
+                console.log("✅ Foto berhasil dipilih (web)");
+            };
+            reader.onerror = () => {
+                Alert.alert('Error', 'Gagal membaca file');
             };
             reader.readAsDataURL(file);
         }
@@ -222,12 +230,45 @@ export default function FormModal({
         }
     };
 
+    // FIX: Validasi lengkap sebelum submit
     const handleSubmit = () => {
+        console.log("🔍 Validating form data...");
+
         // Validasi foto
         if (!formData.Foto) {
             Alert.alert('Error', 'Mohon upload foto tanaman');
             return;
         }
+
+        // Validasi nama tanaman
+        if (!formData.nm_tanaman || formData.nm_tanaman.trim() === "") {
+            Alert.alert('Error', 'Mohon pilih nama tanaman');
+            return;
+        }
+
+        // Validasi jumlah
+        if (!formData.jumlah || formData.jumlah <= 0) {
+            Alert.alert('Error', 'Mohon isi jumlah tanaman dengan benar');
+            return;
+        }
+
+        // Validasi tanggal tanam
+        if (!formData.tgl_tanam) {
+            Alert.alert('Error', 'Mohon pilih tanggal tanam');
+            return;
+        }
+
+        // Validasi lokasi
+        if (!formData.lokasi || formData.lokasi.trim() === "") {
+            Alert.alert('Error', 'Mohon isi lokasi tanam');
+            return;
+        }
+
+        console.log("✅ Validation passed");
+        console.log("📤 Submitting data:", {
+            ...formData,
+            Foto: formData.Foto.substring(0, 50) + "..." // Log sebagian untuk debug
+        });
 
         const dataToSend = selectedTanaman
             ? { ...formData, id: selectedTanaman.id }
@@ -257,6 +298,17 @@ export default function FormModal({
                                     >
                                         <Text style={styles.changePhotoText}>Ganti Foto</Text>
                                     </TouchableOpacity>
+                                    {Platform.OS === 'web' && (
+                                        <label htmlFor="photo-change" style={{ cursor: 'pointer' }}>
+                                            <input
+                                                id="photo-change"
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={pickImageWeb}
+                                                style={{ display: 'none' }}
+                                            />
+                                        </label>
+                                    )}
                                 </View>
                             ) : (
                                 <View style={styles.uploadContainer}>
