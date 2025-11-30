@@ -1,6 +1,4 @@
-
-export const BASE_URL = "http://10.191.220.183:8000/api";
-
+export const BASE_URL = "http://192.168.1.7:8000/api";
 
 export const API_URLS = {
     TANAMAN: `${BASE_URL}/tanaman`,
@@ -14,4 +12,5 @@ export const API_URLS = {
     REGISTER: `${BASE_URL}/register`,
     USER: `${BASE_URL}/user`,
     PENGIRIMAN: `${BASE_URL}/pengiriman`,
+    USER_KURIR: `${BASE_URL}/user?role=kurir`, // Endpoint untuk get user dengan role kurir
 };
