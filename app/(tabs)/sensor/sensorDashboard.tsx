@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { Edit, Plus, Trash2 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import MenuSidebar from "../sidebar";
 import DeleteModal from "./deleteModal";
 import FormModal from "./formModal";
@@ -33,48 +33,65 @@ export default function SensorScreen() {
         setLoading(true);
 
         try {
-            const tipe = activeTab === "ternak" ? "kandang" : "tanaman";
+            console.log(`📡 Fetching ALL sensor data...`);
 
-            const response = await fetch(`${API_URLS.SENSOR}?tipe=${tipe}`);
+            const response = await fetch(API_URLS.SENSOR);
+            console.log("📡 Response status:", response.status);
 
-            // Kalau response rusak / bukan JSON → tidak crash
             let result;
             try {
                 result = await response.json();
+                console.log("📦 Response data:", result);
             } catch (e) {
+                console.log("❌ Parse error:", e);
                 result = [];
             }
 
-            // Backend bisa mengirim array langsung → aman
+            let allData: Sensor[] = [];
+            
+            // Backend bisa mengirim array langsung
             if (Array.isArray(result)) {
-                setSensors(result);
+                allData = result;
             }
-            // Backend bisa mengirim { data: [...] } → aman
+            // Backend mengirim { data: [...] }
             else if (result && Array.isArray(result.data)) {
-                setSensors(result.data);
-            }
-            // Jika format apapun → tetap tidak error
-            else {
-                setSensors([]);
+                allData = result.data;
             }
 
+            console.log("📊 Total ALL data:", allData.length);
+
+            // ✅ FILTER berdasarkan tab aktif
+            let filteredData: Sensor[] = [];
+            
+            if (activeTab === "ternak") {
+                // Tampilkan hanya data yang punya id_kandang
+                filteredData = allData.filter((item: Sensor) => item.id_kandang && !item.id_tanaman);
+                console.log("🐄 Filter KANDANG:", filteredData.length);
+            } else {
+                // Tampilkan hanya data yang punya id_tanaman
+                filteredData = allData.filter((item: Sensor) => item.id_tanaman && !item.id_kandang);
+                console.log("🌱 Filter TANAMAN:", filteredData.length);
+            }
+
+            setSensors(filteredData);
+
         } catch (error) {
-            console.log("Error fetch:", error);
+            console.error("❌ Fetch error:", error);
             setSensors([]);
         } finally {
-            // PASTIKAN LOADING BERHENTI
             setLoading(false);
         }
     };
 
-
     useEffect(() => {
-        setLoading(true);
+        console.log("🔄 Active tab changed to:", activeTab);
         fetchData();
     }, [activeTab]);
 
     const handleAdd = async (newData: any) => {
         try {
+            console.log("➕ Adding sensor data:", newData);
+            
             const response = await fetch(API_URLS.SENSOR, {
                 method: "POST",
                 headers: {
@@ -84,66 +101,120 @@ export default function SensorScreen() {
                 body: JSON.stringify(newData),
             });
 
-            const result = await response.json();
-            if (result.success) {
-                fetchData();
+            console.log("📡 Add response status:", response.status);
+
+            // Parse response
+            let result;
+            try {
+                result = await response.json();
+                console.log("📦 Add response data:", result);
+            } catch (e) {
+                result = { message: "Response tidak valid" };
+            }
+
+            // ✅ FIXED: Cek status HTTP, bukan result.success
+            if (response.ok || response.status === 200 || response.status === 201) {
+                console.log("✅ Data berhasil ditambahkan!");
+                Alert.alert("Sukses", "Data sensor berhasil ditambahkan");
                 setModalVisible(false);
                 setSelectedSensor(undefined);
+                fetchData(); // Refresh data
             } else {
-                alert("Gagal menambah data: " + (result.message || "Error tidak diketahui"));
+                const errorMsg = result.message || result.error || "Gagal menambah data";
+                console.log("❌ Add failed:", errorMsg);
+                Alert.alert("Error", errorMsg);
             }
-        } catch (error) {
-            alert("Server tidak merespons");
+        } catch (error: any) {
+            console.error("❌ Add error:", error);
+            Alert.alert("Error", "Server tidak merespons: " + error.message);
         }
     };
 
     const handleEdit = async (updatedData: any) => {
         if (!selectedSensor) {
-            alert("Tidak ada sensor yang dipilih untuk diedit");
+            Alert.alert("Error", "Tidak ada sensor yang dipilih untuk diedit");
             return;
         }
 
         try {
+            console.log("✏️ Editing sensor:", selectedSensor.id_sensor);
+            console.log("📤 Update data:", updatedData);
+
             const response = await fetch(`${API_URLS.SENSOR}/${selectedSensor.id_sensor}`, {
                 method: "PUT",
-                headers: { "Content-Type": "application/json" },
+                headers: { 
+                    Accept: "application/json",
+                    "Content-Type": "application/json" 
+                },
                 body: JSON.stringify(updatedData),
             });
 
-            const result = await response.json();
-            if (result.success) {
-                fetchData();
+            console.log("📡 Edit response status:", response.status);
+
+            let result;
+            try {
+                result = await response.json();
+                console.log("📦 Edit response data:", result);
+            } catch (e) {
+                result = {};
+            }
+
+            // ✅ FIXED: Cek status HTTP
+            if (response.ok || response.status === 200) {
+                console.log("✅ Data berhasil diupdate!");
+                Alert.alert("Sukses", "Data sensor berhasil diperbarui");
                 setModalVisible(false);
                 setSelectedSensor(undefined);
+                fetchData();
             } else {
-                alert("Gagal memperbarui data: " + result.message);
+                const errorMsg = result.message || "Gagal memperbarui data";
+                console.log("❌ Edit failed:", errorMsg);
+                Alert.alert("Error", errorMsg);
             }
-        } catch (error) {
-            alert("Server tidak merespons");
+        } catch (error: any) {
+            console.error("❌ Edit error:", error);
+            Alert.alert("Error", "Server tidak merespons: " + error.message);
         }
     };
 
     const handleDelete = async () => {
         if (!selectedSensor) {
-            alert("Tidak ada sensor yang dipilih untuk dihapus");
+            Alert.alert("Error", "Tidak ada sensor yang dipilih untuk dihapus");
             return;
         }
 
         try {
+            console.log("🗑️ Deleting sensor:", selectedSensor.id_sensor);
+
             const response = await fetch(`${API_URLS.SENSOR}/${selectedSensor.id_sensor}`, {
                 method: "DELETE",
             });
 
-            const result = await response.json();
-            if (result.success) {
-                fetchData();
+            console.log("📡 Delete response status:", response.status);
+
+            let result;
+            try {
+                result = await response.json();
+                console.log("📦 Delete response data:", result);
+            } catch (e) {
+                result = {};
+            }
+
+            // ✅ FIXED: Cek status HTTP
+            if (response.ok || response.status === 200) {
+                console.log("✅ Data berhasil dihapus!");
+                Alert.alert("Sukses", "Data sensor berhasil dihapus");
                 setDeleteVisible(false);
                 setSelectedSensor(undefined);
+                fetchData();
             } else {
-                alert("Gagal menghapus data");
+                const errorMsg = result.message || "Gagal menghapus data";
+                console.log("❌ Delete failed:", errorMsg);
+                Alert.alert("Error", errorMsg);
             }
-        } catch (error) {
-            alert("Server tidak merespons");
+        } catch (error: any) {
+            console.error("❌ Delete error:", error);
+            Alert.alert("Error", "Server tidak merespons: " + error.message);
         }
     };
 
@@ -163,7 +234,7 @@ export default function SensorScreen() {
                         onPress={() => setActiveTab("ternak")}
                     >
                         <Text style={[styles.tabText, activeTab === "ternak" && styles.tabTextActive]}>
-                            Ternak
+                            🐄 Ternak
                         </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -171,42 +242,47 @@ export default function SensorScreen() {
                         onPress={() => setActiveTab("tanaman")}
                     >
                         <Text style={[styles.tabText, activeTab === "tanaman" && styles.tabTextActive]}>
-                            Tanaman
+                            🌱 Tanaman
                         </Text>
                     </TouchableOpacity>
                 </View>
 
                 {/* Header Title and Add Button */}
                 <View style={styles.headerRow}>
-                    <Text style={styles.title}>
-                        {activeTab === "ternak"
-                            ? "Monitoring Kandang"
-                            : "Monitoring Tanaman"}
-                    </Text>
-                    <View style={styles.actionButtons}>
-                        <TouchableOpacity style={styles.deleteButton}>
-                            <Trash2 size={18} color="#fff" />
-                            <Text style={styles.buttonText}>Hapus</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.editButton}>
-                            <Edit size={18} color="#fff" />
-                            <Text style={styles.buttonText}>Edit</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={styles.addButton}
-                            onPress={() => {
-                                setSelectedSensor(undefined);
-                                setModalVisible(true);
-                            }}
-                        >
-                            <Plus size={18} color="#fff" />
-                            <Text style={styles.buttonText}>Tambah</Text>
-                        </TouchableOpacity>
+                    <View>
+                        <Text style={styles.title}>
+                            {activeTab === "ternak"
+                                ? "Monitoring Kandang"
+                                : "Monitoring Tanaman"}
+                        </Text>
+                        <Text style={styles.subtitle}>
+                            Total Data: {sensors.length}
+                        </Text>
                     </View>
+                    <TouchableOpacity
+                        style={styles.addButton}
+                        onPress={() => {
+                            setSelectedSensor(undefined);
+                            setModalVisible(true);
+                        }}
+                    >
+                        <Plus size={18} color="#fff" />
+                        <Text style={styles.buttonText}>Tambah Data</Text>
+                    </TouchableOpacity>
                 </View>
 
                 {loading ? (
-                    <ActivityIndicator size="large" color="#4A7C2C" style={styles.loader} />
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color="#4A7C2C" />
+                        <Text style={styles.loadingText}>Memuat data...</Text>
+                    </View>
+                ) : sensors.length === 0 ? (
+                    <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyText}>📊 Belum ada data sensor</Text>
+                        <Text style={styles.emptySubtext}>
+                            Tekan tombol "Tambah Data" untuk menambahkan data pertama
+                        </Text>
+                    </View>
                 ) : (
                     <ScrollView style={styles.tableContainer}>
                         <View style={styles.table}>
@@ -220,7 +296,8 @@ export default function SensorScreen() {
                                 <Text style={[styles.cell, styles.headerCell, styles.suhuCell]}>🌡️ Suhu</Text>
                                 <Text style={[styles.cell, styles.headerCell, styles.kelembapanCell]}>💧 Kelembapan</Text>
                                 <Text style={[styles.cell, styles.headerCell, styles.produktivitasCell]}>📈 Produktivitas</Text>
-                                <Text style={[styles.cell, styles.headerCell, styles.statusCell]}>Status Kesehatan</Text>
+                                <Text style={[styles.cell, styles.headerCell, styles.statusCell]}>Status</Text>
+                                <Text style={[styles.cell, styles.headerCell, styles.aksiCell]}>Aksi</Text>
                             </View>
 
                             {/* Data Rows */}
@@ -262,6 +339,26 @@ export default function SensorScreen() {
                                                 <Text style={styles.statusText}>{item.status_kesehatan}</Text>
                                             </View>
                                         </View>
+                                        <View style={[styles.cell, styles.aksiCell]}>
+                                            <TouchableOpacity
+                                                style={styles.actionBtn}
+                                                onPress={() => {
+                                                    setSelectedSensor(item);
+                                                    setModalVisible(true);
+                                                }}
+                                            >
+                                                <Edit size={16} color="#fff" />
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                style={[styles.actionBtn, styles.deleteBtn]}
+                                                onPress={() => {
+                                                    setSelectedSensor(item);
+                                                    setDeleteVisible(true);
+                                                }}
+                                            >
+                                                <Trash2 size={16} color="#fff" />
+                                            </TouchableOpacity>
+                                        </View>
                                     </View>
                                 );
                             })}
@@ -272,7 +369,10 @@ export default function SensorScreen() {
 
             <FormModal
                 visible={modalVisible}
-                onClose={() => setModalVisible(false)}
+                onClose={() => {
+                    setModalVisible(false);
+                    setSelectedSensor(undefined);
+                }}
                 onSubmit={selectedSensor ? handleEdit : handleAdd}
                 initialData={selectedSensor}
                 selectedSensor={selectedSensor}
@@ -281,7 +381,10 @@ export default function SensorScreen() {
 
             <DeleteModal
                 visible={deleteVisible}
-                onClose={() => setDeleteVisible(false)}
+                onClose={() => {
+                    setDeleteVisible(false);
+                    setSelectedSensor(undefined);
+                }}
                 onConfirm={handleDelete}
             />
         </View>
@@ -337,27 +440,10 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         color: "#333",
     },
-    actionButtons: {
-        flexDirection: "row",
-        gap: 10,
-    },
-    deleteButton: {
-        backgroundColor: "#2D2D2D",
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 8,
-        gap: 6,
-    },
-    editButton: {
-        backgroundColor: "#2D2D2D",
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 8,
-        gap: 6,
+    subtitle: {
+        fontSize: 13,
+        color: "#666",
+        marginTop: 4,
     },
     addButton: {
         backgroundColor: "#2D2D2D",
@@ -373,8 +459,33 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         fontSize: 13,
     },
-    loader: {
-        marginTop: 50,
+    loadingContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        paddingTop: 50,
+    },
+    loadingText: {
+        marginTop: 10,
+        color: "#666",
+        fontSize: 14,
+    },
+    emptyContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        paddingTop: 50,
+    },
+    emptyText: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#666",
+        marginBottom: 8,
+    },
+    emptySubtext: {
+        fontSize: 13,
+        color: "#999",
+        textAlign: "center",
     },
     tableContainer: {
         flex: 1,
@@ -420,26 +531,33 @@ const styles = StyleSheet.create({
         fontSize: 13,
     },
     idCell: {
-        width: 120,
+        width: 100,
     },
     lokasiCell: {
-        width: 130,
+        width: 120,
     },
     populasiCell: {
-        width: 100,
+        width: 90,
     },
     suhuCell: {
-        width: 100,
+        width: 90,
     },
     kelembapanCell: {
-        width: 130,
+        width: 120,
     },
     produktivitasCell: {
-        width: 140,
+        width: 120,
     },
     statusCell: {
-        width: 150,
+        width: 130,
         alignItems: "center",
+    },
+    aksiCell: {
+        width: 100,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
     },
     statusBadge: {
         paddingHorizontal: 14,
@@ -458,5 +576,13 @@ const styles = StyleSheet.create({
         color: "#fff",
         fontSize: 12,
         fontWeight: "600",
+    },
+    actionBtn: {
+        backgroundColor: "#2D2D2D",
+        padding: 6,
+        borderRadius: 6,
+    },
+    deleteBtn: {
+        backgroundColor: "#DC3545",
     },
 });
