@@ -24,8 +24,8 @@ import {
     Video,
     Send,
 } from "lucide-react-native";
-import { useLanguage } from "../user/contexts/LanguageContext";
-import { useTheme } from "../user/contexts/ThemeContext";
+import { useLanguage } from "../petugas/contexts/LanguageContext";
+import { useTheme } from "../petugas/contexts/ThemeContext";
 
 interface FAQItem {
     id: number;

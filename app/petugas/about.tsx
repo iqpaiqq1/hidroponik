@@ -24,8 +24,8 @@ import {
     TouchableOpacity,
     View
 } from "react-native";
-import { useLanguage } from "../user/contexts/LanguageContext";
-import { useTheme } from "../user/contexts/ThemeContext";
+import { useLanguage } from "../petugas/contexts/LanguageContext";
+import { useTheme } from "../petugas/contexts/ThemeContext";
 
 const { width } = Dimensions.get("window");
 

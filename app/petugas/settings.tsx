@@ -23,8 +23,8 @@ import {
     User as UserIcon,
     X,
 } from "lucide-react-native";
-import { useLanguage } from "../user/contexts/LanguageContext";
-import { useTheme } from "../user/contexts/ThemeContext";
+import { useLanguage } from "../petugas/contexts/LanguageContext";
+import { useTheme } from "../petugas/contexts/ThemeContext";
 
 interface UserData {
     gmail: string;
@@ -281,14 +281,14 @@ export default function SettingsScreen() {
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={styles.navItem}
-                    onPress={() => router.push("/user/dashboardUser")}
+                    onPress={() => router.push("/petugas/dashboardPetugas")}
                 >
                     <Home size={24} color="#fff" />
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={styles.navItem}
                     onPress={() => router.push({
-                        pathname: "/user/profile",
+                        pathname: "/petugas/profile",
                         params: { from: "settings" }
                     })}
                 >

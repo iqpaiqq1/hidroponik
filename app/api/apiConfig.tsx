@@ -12,5 +12,6 @@ export const API_URLS = {
     REGISTER: `${BASE_URL}/register`,
     USER: `${BASE_URL}/user`,
     PENGIRIMAN: `${BASE_URL}/pengiriman`,
-    USER_KURIR: `${BASE_URL}/user?role=kurir`, // Endpoint untuk get user dengan role kurir
+    USER_KURIR: `${BASE_URL}/user?role=kurir`,
+
 };

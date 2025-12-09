@@ -1,4 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import { useFocusEffect } from '@react-navigation/native';
+import { useTheme } from "./contexts/ThemeContext";
+import { useLanguage } from "./contexts/LanguageContext";
 import {
     View,
     Text,
@@ -100,14 +103,13 @@ export default function DashboardPetugas() {
     const [editData, setEditData] = useState<any>(null);
     const [saving, setSaving] = useState(false);
 
-    // Modal Panen Tanaman states
+    // Modal Panen Tanaman 
     const [panenModalVisible, setPanenModalVisible] = useState(false);
     const [selectedTanaman, setSelectedTanaman] = useState<CountdownData | null>(null);
     const [kualitas, setKualitas] = useState("");
     const [jumlahPanen, setJumlahPanen] = useState("");
     const [processingPanen, setProcessingPanen] = useState(false);
 
-    // Modal Panen Kandang states
     const [panenKandangModalVisible, setPanenKandangModalVisible] = useState(false);
     const [selectedKandang, setSelectedKandang] = useState<CountdownKandang | null>(null);
     const [kualitasKandang, setKualitasKandang] = useState("");
@@ -115,16 +117,26 @@ export default function DashboardPetugas() {
     const [processingPanenKandang, setProcessingPanenKandang] = useState(false);
 
     const router = useRouter();
+    const { colors, isDark } = useTheme();
+    const { t } = useLanguage();
 
     useEffect(() => {
         loadUserData();
     }, []);
 
+    useFocusEffect(
+        useCallback(() => {
+            console.log('🔄 DashboardPetugas focused, reloading user data');
+            loadUserData();
+        }, [])
+    );
     const loadUserData = async () => {
         try {
             const user = await AsyncStorage.getItem("user");
             if (user) {
                 const parsed = JSON.parse(user);
+
+                console.log('🔍 Parsed user data:', parsed); 
 
                 if (parsed.role?.toLowerCase() !== "petugas") {
                     switch (parsed.role?.toLowerCase()) {
@@ -144,9 +156,33 @@ export default function DashboardPetugas() {
                     return;
                 }
 
-                setUserData({
-                    gmail: parsed.gmail || "",
+                const userId = parsed.id_user || parsed.id || parsed.user_id;
+
+                if (!userId) {
+                    console.error('❌ User ID tidak ditemukan dalam data:', parsed);
+                    Alert.alert('Error', 'Data pengguna tidak lengkap. Silakan login ulang.');
+                    router.replace("/LoginScreen");
+                    return;
+                }
+
+               
+                const userDataToStore = {
+                    id: userId,  
+                    id_user: userId,
                     nama: parsed.nama || "",
+                    username: parsed.username || "",
+                    gmail: parsed.gmail || parsed.email || "",
+                    role: parsed.role || "",
+                    profile_picture: parsed.profile_picture || null,
+                    token: parsed.token || "" 
+                };
+
+              
+                await AsyncStorage.setItem("user", JSON.stringify(userDataToStore));
+
+                setUserData({
+                    gmail: parsed.gmail || parsed.email || "",
+                    nama: parsed.nama || parsed.name || "",
                     role: parsed.role || "",
                 });
 
@@ -291,20 +327,40 @@ export default function DashboardPetugas() {
 
     const fetchSensor = async () => {
         try {
+            console.log("Fetching sensor from:", API_URLS.SENSOR);
             const response = await fetch(API_URLS.SENSOR);
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
             const data = await response.json();
+
+            // Jangan console.log seluruh data → mengandung Base64 panjang
+            console.log("Sensor data diterima (ringkas)");
 
             if (Array.isArray(data)) {
                 setSensor(data);
+                console.log("Sensor array set:", data.length, "items");
+            } else if (data && Array.isArray(data.data)) {
+                setSensor(data.data);
+                console.log("Sensor array set dari data.data:", data.data.length, "items");
+            } else if (data && typeof data === 'object') {
+                setSensor([data]);
+                console.log("Single sensor object wrapped in array");
             } else {
-                console.error("Sensor data is not an array:", data);
+                console.error("Unexpected sensor data format");
                 setSensor([]);
+                Alert.alert("Info", "Format data sensor tidak sesuai");
             }
         } catch (error) {
             console.error("Error fetching sensor:", error);
             setSensor([]);
+            const errorMessage = error instanceof Error ? error.message : "Terjadi kesalahan";
+            Alert.alert("Error", "Gagal mengambil data sensor: " + errorMessage);
         }
     };
+
 
     const onRefresh = async () => {
         setRefreshing(true);
@@ -1023,7 +1079,7 @@ export default function DashboardPetugas() {
             </ScrollView>
 
             <View style={styles.bottomNav}>
-                <TouchableOpacity style={styles.navItem} onPress={() => router.push("/petugas/settings copy")}>
+                <TouchableOpacity style={styles.navItem} onPress={() => router.push("/petugas/settings")}>
                     <Settings size={24} color="#fff" />
                 </TouchableOpacity>
 
@@ -1033,7 +1089,7 @@ export default function DashboardPetugas() {
 
                 <TouchableOpacity
                     style={styles.navItem}
-                    onPress={() => router.push({ pathname: "/petugas/profile copy", params: { from: "dashboard" } })}
+                    onPress={() => router.push({ pathname: "/petugas/profile", params: { from: "dashboard" } })}
                 >
                     <User size={24} color="#fff" />
                 </TouchableOpacity>

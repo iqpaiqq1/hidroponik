@@ -417,7 +417,7 @@ export default function ProfileScreen() {
     if (loading && !profile.name) {
         return (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#4a2f1a" />
+                <ActivityIndicator size="large" color="#4CAF50" />
                 <Text style={styles.loadingText}>Loading profile...</Text>
             </View>
         );
@@ -431,7 +431,7 @@ export default function ProfileScreen() {
                     onPress={() => router.back()}
                     style={styles.backButton}
                 >
-                    <Text style={styles.backText}>← Back</Text>
+                    <Text style={styles.backText}>Kembali</Text>
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Your Profile</Text>
                 {/* LOGOUT BUTTON */}
@@ -449,7 +449,7 @@ export default function ProfileScreen() {
                     <View style={styles.profileImageContainer}>
                         {uploadingPhoto ? (
                             <View style={styles.uploadingOverlay}>
-                                <ActivityIndicator size="large" color="#4a2f1a" />
+                                <ActivityIndicator size="large" color="#4CAF50" />
                                 <Text style={styles.uploadingText}>Uploading...</Text>
                             </View>
                         ) : (
@@ -571,13 +571,13 @@ const styles = StyleSheet.create({
     },
     backText: {
         fontSize: 16,
-        color: '#4a2f1a',
+        color: '#4CAF50',
         fontWeight: '600',
     },
     headerTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#4a2f1a',
+        color: '#4CAF50',
     },
     logoutButton: {
         padding: 5,
@@ -607,13 +607,13 @@ const styles = StyleSheet.create({
         borderRadius: 60,
         backgroundColor: "#ddd",
         borderWidth: 3,
-        borderColor: '#4a2f1a',
+        borderColor: '#4CAF50',
     },
     cameraButton: {
         position: 'absolute',
         bottom: 0,
         right: 0,
-        backgroundColor: '#4a2f1a',
+        backgroundColor: '#4CAF50',
         width: 36,
         height: 36,
         borderRadius: 18,
@@ -644,7 +644,7 @@ const styles = StyleSheet.create({
         fontSize: 15,
         fontWeight: "700",
         marginTop: 10,
-        color: "#4a2f1a",
+        color: "#4CAF50",
         alignSelf: "flex-start",
         marginBottom: 5,
     },
@@ -690,7 +690,7 @@ const styles = StyleSheet.create({
         shadowRadius: 3,
     },
     editButton: {
-        backgroundColor: "#4a2f1a",
+        backgroundColor: "#4CAF50",
     },
     saveButton: {
         backgroundColor: '#28a745',
@@ -712,7 +712,7 @@ const styles = StyleSheet.create({
     loadingText: {
         marginTop: 10,
         fontSize: 16,
-        color: "#4a2f1a",
+        color: "#4CAF50",
         fontWeight: '500',
     },
 });

@@ -1,4 +1,3 @@
-// app/contexts/LanguageContext.tsx
 import React, { createContext, useContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -12,27 +11,95 @@ interface LanguageContextType {
 
 const translations = {
     id: {
-        // Dashboard
-        welcomeTo: "Selamat Datang di AgroTech Dashboard",
-        growWithoutSoil: "Bertumbuh Tanpa Tanah.",
-        harvestWithoutLimits: "Panen Tanpa Batasan.",
-        knowMore: "Ketahui Lebih Banyak →",
-        searchPlaceholder: "Cari produk kami, di sini",
-        categories: "Kategori",
-        seeAll: "Lihat Semua",
-        all: "Semua",
-        vegetable: "Tanaman",
-        chicken: "Hewan",
-        seeDetail: "Lihat detail ↗",
-        noProducts: "Tidak ada produk yang ditemukan",
-        loading: "Memuat data...",
+        // Dashboard Petugas
+        welcomeOfficer: "Selamat datang petugas,",
+        statistics: "Statistik Sistem:",
+        sensor: "Sensor",
+        livestock: "Ternak",
+        plants: "Tanaman",
+        plantTab: "Tanaman",
+        livestockTab: "Ternak",
+        sensorTab: "Sensor",
 
-        // Detail Tanaman
-        detail: "Detail",
-        description: "Deskripsi",
-        keunggulan: "Keunggulan",
-        syaratTumbuh: "Syarat Tumbuh",
-        caraPenanaman: "Cara Penanaman",
+        // Plant/Livestock Cards
+        planted: "Ditanam:",
+        productionStarted: "Produksi Dimulai:",
+        daysLeft: "Hari Lagi",
+        harvestTarget: "Target Panen:",
+        harvestNow: "Panen Sekarang",
+        harvestProduction: "Panen Produksi",
+
+        // Status
+        newlyPlanted: "Baru Ditanam",
+        readySoon: "Segera Panen",
+        readyToHarvest: "Sudah Waktunya Panen",
+        lateHarvest: "Terlambat Panen",
+
+        // Sensor Info
+        location: "Lokasi:",
+        plantId: "ID Tanaman:",
+        cageId: "ID Kandang:",
+        population: "Populasi:",
+        temperature: "Suhu",
+        humidity: "Kelembapan",
+        productivity: "Produktivitas",
+
+        // Edit Modal
+        edit: "Edit",
+        editData: "Edit Data",
+        editPlantData: "Edit Data Tanaman",
+        editCageData: "Edit Data Kandang",
+        editSensorData: "Edit Data Sensor",
+        plantName: "Nama Tanaman",
+        variety: "Varietas",
+        quantity: "Jumlah",
+        cageName: "Nama Kandang",
+        animalType: "Jenis Hewan",
+        capacity: "Kapasitas",
+        animalCount: "Jumlah Hewan",
+        productionResult: "Hasil Produksi",
+        productionAmount: "Jumlah Produksi",
+        notes: "Keterangan",
+        harvestDays: "Lama Panen (hari)",
+        cancel: "Batal",
+        save: "Simpan",
+        success: "Berhasil",
+        dataUpdated: "Data berhasil diperbarui!",
+        failed: "Gagal",
+        saveFailed: "Terjadi kesalahan saat menyimpan data.",
+
+        // Harvest Modal
+        confirmHarvest: "Konfirmasi Panen",
+        confirmProduction: "Konfirmasi Panen Produksi",
+        plant: "Tanaman:",
+        cage: "Kandang:",
+        type: "Jenis:",
+        production: "Produksi:",
+        harvestAmount: "Jumlah Panen:",
+        productionQty: "Jumlah Produksi:",
+        quality: "Kualitas:",
+        qualityPlaceholder: "Contoh: Baik, Sangat Baik, Sedang",
+        enterAmount: "Masukkan jumlah panen",
+        enterProduction: "Masukkan jumlah produksi",
+        dataKeptInfo: "ℹ️ Data kandang tetap tersimpan setelah panen",
+        confirmHarvestBtn: "Konfirmasi Panen",
+        harvestSuccess: "Tanaman berhasil dipanen dan dipindahkan ke data panen",
+        productionSuccess: "Produksi kandang berhasil dipanen! Siklus produksi baru telah dimulai.",
+        error: "Error",
+        fillQuality: "Mohon isi kualitas panen",
+        fillQualityProduction: "Mohon isi kualitas produksi",
+        amountMustBePositive: "Jumlah panen harus lebih dari 0",
+        productionMustBePositive: "Jumlah produksi harus lebih dari 0",
+        harvestFailed: "Gagal memproses panen",
+        productionFailed: "Gagal memproses panen kandang",
+        harvestError: "Terjadi kesalahan saat memproses panen",
+        productionError: "Terjadi kesalahan saat memproses panen kandang",
+
+        // Empty State
+        noPlantData: "Belum ada data tanaman",
+        noLivestockData: "Belum ada data ternak",
+        noSensorData: "Belum ada data sensor",
+        checkApi: "Pastikan API sensor berjalan dengan baik",
 
         // Settings
         settings: "Pengaturan",
@@ -41,61 +108,117 @@ const translations = {
         darkMode: "Mode Gelap",
         language: "Bahasa",
         logout: "Keluar",
-
-        // Alert & Modal Texts
         helpTitle: "Bantuan",
         helpMessage: "Untuk bantuan lebih lanjut, silakan hubungi:\n\nEmail: support@agrotech.com\nTelepon: +62 812-3456-7890",
         aboutTitle: "Tentang AgroTech",
         aboutMessage: "AgroTech Dashboard v1.0.0\n\nAplikasi manajemen pertanian hidroponik modern untuk meningkatkan produktivitas dan efisiensi pertanian Anda.\n\n© 2024 AgroTech Indonesia",
         logoutTitle: "Keluar",
         logoutMessage: "Apakah Anda yakin ingin keluar?",
-        cancel: "Batal",
         ok: "OK",
-        selectLanguage: "Pilih bahasa:",
-        indonesia: "Indonesia",
+        selectLanguage: "Pilih Bahasa",
+        currentLanguage: "Bahasa Saat Ini",
+        indonesia: "Bahasa Indonesia",
         english: "English",
 
         // Profile
         myProfile: "Profil Saya",
-        editProfile: "Edit Profile",
-        profileInformation: "Informasi Profil",
         fullName: "Nama Lengkap",
         email: "Email",
         role: "Peran",
-        memberSince: "Bergabung Sejak",
-        activityStatistics: "Statistik Aktivitas",
-        orders: "Pesanan",
-        favorites: "Favorit",
-        views: "Dilihat",
-        editProfileMessage: "Fitur edit profile akan segera tersedia!",
-
-        // Know More Page
-        hydroponicInfo: "Pertanian hidroponik adalah metode menanam tanaman tanpa tanah, menggunakan larutan air kaya nutrisi untuk mengirimkan mineral penting langsung ke akar. Teknik ini dapat dilakukan di media inert seperti rockwool atau perlit sebagai penopang, atau dengan akar yang terendam dalam larutan itu sendiri. Hidroponik sangat ideal untuk pertanian perkotaan atau lahan terbatas dan memungkinkan produksi sepanjang tahun bahkan di daerah dengan tanah yang terbatas atau tidak ada tanah.",
-        agrotechInspiration: "AgroTech terinspirasi dari Agriyaponik. Agriyaponik adalah perusahaan agritech modern yang fokus pada pengembangan sistem pangan berkelanjutan dan sehat melalui teknologi hidroponik yang inovatif. Kami percaya bahwa pertanian adalah solusi inovatif dan ramah lingkungan untuk masa depan yang lebih baik bagi manusia dan planet ini.",
-        agriyaponikMission: "Di Agriyaponik, kami menggabungkan sains, teknologi, dan kepedulian terhadap alam untuk menghasilkan sayuran hidroponik, microgreens, dan telur Omega-3 berkualitas tinggi.",
+        editProfile: "Edit Profile",
+        uploadPhoto: "Upload Foto",
+        loading: "Memuat...",
     },
     en: {
-        // Dashboard
-        welcomeTo: "Welcome to AgroTech Dashboard",
-        growWithoutSoil: "Grow Without Soil.",
-        harvestWithoutLimits: "Harvest Without Limits.",
-        knowMore: "Know More →",
-        searchPlaceholder: "Search our products here",
-        categories: "Categories",
-        seeAll: "See All",
-        all: "All",
-        vegetable: "Vegetable",
-        chicken: "Chicken",
-        seeDetail: "See detail ↗",
-        noProducts: "No products found",
-        loading: "Loading data...",
+        // Dashboard Petugas
+        welcomeOfficer: "Welcome officer,",
+        statistics: "System Statistics:",
+        sensor: "Sensor",
+        livestock: "Livestock",
+        plants: "Plants",
+        plantTab: "Plants",
+        livestockTab: "Livestock",
+        sensorTab: "Sensor",
 
-        // Detail Tanaman
-        detail: "Detail",
-        description: "Description",
-        keunggulan: "Advantages",
-        syaratTumbuh: "Growing Requirements",
-        caraPenanaman: "Planting Method",
+        // Plant/Livestock Cards
+        planted: "Planted:",
+        productionStarted: "Production Started:",
+        daysLeft: "Days Left",
+        harvestTarget: "Harvest Target:",
+        harvestNow: "Harvest Now",
+        harvestProduction: "Harvest Production",
+
+        // Status
+        newlyPlanted: "Newly Planted",
+        readySoon: "Ready Soon",
+        readyToHarvest: "Ready to Harvest",
+        lateHarvest: "Late Harvest",
+
+        // Sensor Info
+        location: "Location:",
+        plantId: "Plant ID:",
+        cageId: "Cage ID:",
+        population: "Population:",
+        temperature: "Temperature",
+        humidity: "Humidity",
+        productivity: "Productivity",
+
+        // Edit Modal
+        edit: "Edit",
+        editData: "Edit Data",
+        editPlantData: "Edit Plant Data",
+        editCageData: "Edit Cage Data",
+        editSensorData: "Edit Sensor Data",
+        plantName: "Plant Name",
+        variety: "Variety",
+        quantity: "Quantity",
+        cageName: "Cage Name",
+        animalType: "Animal Type",
+        capacity: "Capacity",
+        animalCount: "Animal Count",
+        productionResult: "Production Result",
+        productionAmount: "Production Amount",
+        notes: "Notes",
+        harvestDays: "Harvest Days",
+        cancel: "Cancel",
+        save: "Save",
+        success: "Success",
+        dataUpdated: "Data updated successfully!",
+        failed: "Failed",
+        saveFailed: "An error occurred while saving data.",
+
+        // Harvest Modal
+        confirmHarvest: "Confirm Harvest",
+        confirmProduction: "Confirm Production Harvest",
+        plant: "Plant:",
+        cage: "Cage:",
+        type: "Type:",
+        production: "Production:",
+        harvestAmount: "Harvest Amount:",
+        productionQty: "Production Quantity:",
+        quality: "Quality:",
+        qualityPlaceholder: "Example: Good, Very Good, Fair",
+        enterAmount: "Enter harvest amount",
+        enterProduction: "Enter production amount",
+        dataKeptInfo: "ℹ️ Cage data will be kept after harvest",
+        confirmHarvestBtn: "Confirm Harvest",
+        harvestSuccess: "Plant harvested successfully and moved to harvest data",
+        productionSuccess: "Cage production harvested successfully! New production cycle has started.",
+        error: "Error",
+        fillQuality: "Please fill in harvest quality",
+        fillQualityProduction: "Please fill in production quality",
+        amountMustBePositive: "Harvest amount must be greater than 0",
+        productionMustBePositive: "Production amount must be greater than 0",
+        harvestFailed: "Failed to process harvest",
+        productionFailed: "Failed to process cage harvest",
+        harvestError: "An error occurred while processing harvest",
+        productionError: "An error occurred while processing cage harvest",
+
+        // Empty State
+        noPlantData: "No plant data available",
+        noLivestockData: "No livestock data available",
+        noSensorData: "No sensor data available",
+        checkApi: "Make sure the sensor API is running properly",
 
         // Settings
         settings: "Settings",
@@ -110,31 +233,20 @@ const translations = {
         aboutMessage: "AgroTech Dashboard v1.0.0\n\nModern hydroponic farming management application to improve your farm's productivity and efficiency.\n\n© 2024 AgroTech Indonesia",
         logoutTitle: "Logout",
         logoutMessage: "Are you sure you want to logout?",
-        cancel: "Cancel",
         ok: "OK",
         selectLanguage: "Select Language",
+        currentLanguage: "Current Language",
         indonesia: "Indonesian",
         english: "English",
-        currentLanguage: "Current Language",
 
         // Profile
         myProfile: "My Profile",
-        editProfile: "Edit Profile",
-        profileInformation: "Profile Information",
         fullName: "Full Name",
         email: "Email",
         role: "Role",
-        memberSince: "Member Since",
-        activityStatistics: "Activity Statistics",
-        orders: "Orders",
-        favorites: "Favorites",
-        views: "Views",
-        editProfileMessage: "Edit profile feature coming soon!",
-
-        // Know More Page
-        hydroponicInfo: "Hydroponic farming is a method of growing plants without soil, using a nutrient-rich water solution to deliver essential minerals directly to the roots. This technique can be done in inert media like rockwool or perlite for support, or with roots submerged in the solution itself. Hydroponics is ideal for urban or limited-space farming and allows for year-round production even in areas with limited or no soil.",
-        agrotechInspiration: "AgroTech was inspired by Agriyaponik. Agriyaponik is a modern agritech company focused on developing sustainable and healthy food systems through innovative hydroponic technology. We believe that agriculture is an innovative and environmentally friendly solution for a better future for people and the planet.",
-        agriyaponikMission: "At Agriyaponik, we combine science, technology, and care for nature to produce high-quality hydroponic vegetables, microgreens, and Omega-3 eggs.",
+        editProfile: "Edit Profile",
+        uploadPhoto: "Upload Photo",
+        loading: "Loading...",
     },
 };
 
@@ -152,7 +264,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({
     const loadLanguage = async () => {
         try {
             const savedLanguage = await AsyncStorage.getItem("language");
-            console.log("Loaded language from storage:", savedLanguage); // Debug
+            console.log("Loaded language from storage:", savedLanguage);
             if (savedLanguage) {
                 setLanguageState(savedLanguage as Language);
             }
@@ -163,10 +275,10 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const setLanguage = async (lang: Language) => {
         try {
-            console.log("Setting language to:", lang); // Debug
+            console.log("Setting language to:", lang);
             await AsyncStorage.setItem("language", lang);
             setLanguageState(lang);
-            console.log("Language set successfully"); // Debug
+            console.log("Language set successfully");
         } catch (error) {
             console.error("Error saving language:", error);
         }

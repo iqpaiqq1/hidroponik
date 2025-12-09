@@ -1,18 +1,17 @@
-
 import { Stack } from "expo-router";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { LanguageProvider } from "./contexts/LanguageContext";
 
-export default function UserLayout() {
+export default function PetugasLayout() {
     return (
         <ThemeProvider>
-           
+            <LanguageProvider>
                 <Stack screenOptions={{ headerShown: false }}>
                     <Stack.Screen name="dashboardPetugas" />
-                    <Stack.Screen name="settings copy" />
-                    <Stack.Screen name="profile copy" />
-                    <Stack.Screen name="detail copy" />
+                    <Stack.Screen name="settings" />
+                    <Stack.Screen name="profile" />
                 </Stack>
-            
+            </LanguageProvider>
         </ThemeProvider>
     );
 }

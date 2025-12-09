@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useColorScheme } from "react-native";
@@ -26,10 +25,10 @@ interface ThemeContextType {
 }
 
 const lightColors = {
-    primary: "#7ED321",
-    secondary: "#FF6B35",
-    background: "#FFFFFF",
-    card: "#F5F5F5",
+    primary: "#7CB342",
+    secondary: "#FFA726",
+    background: "#F5F5F5",
+    card: "#FFFFFF",
     text: "#333333",
     textSecondary: "#666666",
     border: "#E0E0E0",
@@ -41,7 +40,7 @@ const lightColors = {
 
 const darkColors = {
     primary: "#8BC34A",
-    secondary: "#FF8A65",
+    secondary: "#FFB74D",
     background: "#121212",
     card: "#1E1E1E",
     text: "#FFFFFF",
