@@ -164,6 +164,7 @@ export default function DashboardUser() {
 
         return combined;
     };
+
     const handleDownloadItem = async (item: any) => {
         try {
             if (item.type !== 'tanaman') {
@@ -188,9 +189,6 @@ export default function DashboardUser() {
                 caraPenanaman: { id: [], en: [] },
                 lamaPanen: item.lama_panen || "-"
             };
-
-
-          
         } catch (error) {
             console.error('Error generating PDF:', error);
             Alert.alert(
@@ -199,6 +197,7 @@ export default function DashboardUser() {
             );
         }
     };
+
     const filteredData = getFilteredData();
 
     const styles = createStyles(colors, isDark, width);
@@ -271,7 +270,6 @@ export default function DashboardUser() {
                 <View style={styles.categorySection}>
                     <View style={styles.categoryHeader}>
                         <Text style={styles.categoryTitle}>{t("categories")}</Text>
-                       
                     </View>
 
                     <ScrollView
@@ -335,7 +333,6 @@ export default function DashboardUser() {
                             </TouchableOpacity>
                         </View>
                     </ScrollView>
-
                 </View>
 
                 {/* Products Grid */}
@@ -354,19 +351,17 @@ export default function DashboardUser() {
                                         {item.type === "tanaman" ? (
                                             <Leaf size={50} color={colors.primary} strokeWidth={1.5} />
                                         ) : (
-                                            <Egg size={50} color="#FFB800" strokeWidth={1.5} />
+                                            <PawPrint size={50} color="#D2691E" strokeWidth={1.5} />
                                         )}
                                     </View>
                                 )}
-                            
-                               
                             </View>
 
                             <View style={styles.productInfo}>
                                 <Text style={styles.productName}>
                                     {item.type === "tanaman"
                                         ? item.nm_tanaman
-                                        : `${item.Hasil_Produksi || item.jenis_hewan} - ${item.nm_kandang}`}
+                                        : item.jenis_hewan}
                                 </Text>
                                 <TouchableOpacity
                                     style={styles.detailButton}
@@ -375,6 +370,12 @@ export default function DashboardUser() {
                                             router.push({
                                                 pathname: "/user/detail",
                                                 params: { nama: item.nm_tanaman }
+                                            });
+                                        } else {
+                                            // Route ke detailHewan untuk hewan ternak
+                                            router.push({
+                                                pathname: "/user/detailHewan",
+                                                params: { nama: item.jenis_hewan }
                                             });
                                         }
                                     }}

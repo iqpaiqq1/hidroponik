@@ -25,11 +25,14 @@ type Kandang = {
     Hasil_Produksi: string;
     Jml_produksi: number;
     keterangan: string;
+    tgl_produksi: string | null; // Format: YYYY-MM-DD
+    lama_produksi: number; // Siklus produksi dalam hari
 };
 
 type CountdownData = {
     kandang: Kandang;
     daysRemaining: number;
+    daysPassed: number;
     percentage: number;
     statusText: string;
     statusColor: string;
@@ -114,6 +117,17 @@ const HEWAN_OPTIONS = [
         max_produksi: 25,
         satuan_produksi: "liter/hari",
         estimasi_produksi: "15-20 liter/hari"
+    },
+    {
+        nama: "Itik Pedaging",
+        varietas: "Itik Mojosari",
+        lama_produksi: 60,
+        siklus_produksi: 60,
+        Hasil_Produksi: "Daging Itik",
+        min_produksi: 2,
+        max_produksi: 4,
+        satuan_produksi: "kg/ekor",
+        estimasi_produksi: "2-4 kg/ekor"
     }
 ];
 
@@ -134,7 +148,7 @@ export default function KandangScreen() {
     const [saving, setSaving] = useState(false);
     const [deletingId, setDeletingId] = useState<number | null>(null);
 
-    // Fungsi calculate countdown
+    // ✅ Fungsi hitung berdasarkan tgl_produksi dan lama_produksi dari DB
     const calculateCountdown = (kandang: Kandang): CountdownData => {
         const hewanInfo = HEWAN_OPTIONS.find(h => h.nama === kandang.jenis_hewan);
 
@@ -142,22 +156,35 @@ export default function KandangScreen() {
             return {
                 kandang,
                 daysRemaining: 0,
+                daysPassed: 0,
                 percentage: 100,
                 statusText: "Jenis Tidak Dikenal",
                 statusColor: "#FF6B6B",
                 isReadyForProduction: false
             };
         }
-        const simulatedDaysPassed = kandang.Jml_produksi > 0 ? hewanInfo.lama_produksi : 0;
 
-        const daysRemaining = Math.max(0, hewanInfo.lama_produksi - simulatedDaysPassed);
-        const percentage = Math.min(100, Math.floor((simulatedDaysPassed / hewanInfo.lama_produksi) * 100));
+        // Ambil lama_produksi dari database (jika ada), jika tidak gunakan dari HEWAN_OPTIONS
+        const cycleLength = kandang.lama_produksi || hewanInfo.lama_produksi;
+
+        // Hitung hari yang sudah berlalu sejak tgl_produksi
+        let daysPassed = 0;
+        if (kandang.tgl_produksi) {
+            const startDate = new Date(kandang.tgl_produksi);
+            const today = new Date();
+            const diffTime = today.getTime() - startDate.getTime();
+            daysPassed = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            daysPassed = Math.max(0, daysPassed); // Tidak boleh negatif
+        }
+
+        const daysRemaining = Math.max(0, cycleLength - daysPassed);
+        const percentage = Math.min(100, Math.floor((daysPassed / cycleLength) * 100));
 
         let statusText = "";
         let statusColor = "";
         let isReadyForProduction = false;
 
-        if (simulatedDaysPassed === 0) {
+        if (!kandang.tgl_produksi || daysPassed === 0) {
             statusText = "Baru Ditambahkan";
             statusColor = "#2196F3";
         } else if (daysRemaining > 7) {
@@ -166,7 +193,7 @@ export default function KandangScreen() {
         } else if (daysRemaining > 0 && daysRemaining <= 7) {
             statusText = "Segera Produksi";
             statusColor = "#FF9800";
-        } else if (daysRemaining === 0) {
+        } else if (daysRemaining === 0 && daysPassed >= cycleLength) {
             statusText = "Siap Produksi";
             statusColor = "#4CAF50";
             isReadyForProduction = true;
@@ -179,6 +206,7 @@ export default function KandangScreen() {
         return {
             kandang,
             daysRemaining,
+            daysPassed,
             percentage,
             statusText,
             statusColor,
@@ -186,14 +214,10 @@ export default function KandangScreen() {
         };
     };
 
-    // Fungsi generate produksi otomatis
-    const generateProduction = (kandang: Kandang, countdownData: CountdownData): number => {
-        if (!countdownData.isReadyForProduction) {
-            return kandang.Jml_produksi;
-        }
-
+    // ✅ Fungsi generate produksi otomatis
+    const generateProduction = (kandang: Kandang): number => {
         const hewanInfo = HEWAN_OPTIONS.find(h => h.nama === kandang.jenis_hewan);
-        if (!hewanInfo) return kandang.Jml_produksi;
+        if (!hewanInfo) return 0;
 
         let production = 0;
 
@@ -223,8 +247,13 @@ export default function KandangScreen() {
                 production = Math.floor(kandang.jumlah_hewan * 18);
                 break;
 
+            case "Itik Pedaging":
+                const avgWeightItik = 3;
+                production = Math.floor(kandang.jumlah_hewan * avgWeightItik);
+                break;
+
             default:
-                production = kandang.Jml_produksi;
+                production = 0;
         }
 
         return production;
@@ -233,17 +262,12 @@ export default function KandangScreen() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            console.log("Fetching from:", API_URLS.KANDANG);
             const res = await fetch(API_URLS.KANDANG);
-            console.log("Fetch status:", res.status);
-
             if (!res.ok) {
                 throw new Error(`HTTP error! status: ${res.status}`);
             }
 
             const json = await res.json();
-            console.log("Data received:", json);
-
             const kandangData = json.data || json;
             setData(Array.isArray(kandangData) ? kandangData : []);
         } catch (error) {
@@ -283,31 +307,28 @@ export default function KandangScreen() {
             return Alert.alert("Error", "Jenis hewan tidak valid");
         }
 
-        // FIX: Payload tanpa foto_hasil
-        const payload = {
-            nm_kandang: nmKandang.trim(),
-            kapasitas: parseInt(kapasitas),
-            jumlah_hewan: parseInt(jumlahHewan),
-            jenis_hewan: jenisHewan,
-            Hasil_Produksi: hewanInfo.Hasil_Produksi,
-            Jml_produksi: 0,
-            keterangan: keterangan.trim()
-        };
-
-        console.log("Payload:", payload);
         setSaving(true);
 
         try {
             const method = selectedId ? "PUT" : "POST";
             const url = selectedId ? `${API_URLS.KANDANG}/${selectedId}` : API_URLS.KANDANG;
 
-            // ✅ FIX: Untuk UPDATE, kirim HANYA field yang diubah
+            // ✅ Get today's date in YYYY-MM-DD format (local timezone)
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const todayString = `${year}-${month}-${day}`;
+
+            // ✅ Untuk CREATE: SELALU kirim tgl_produksi & lama_produksi
+            // ✅ Untuk UPDATE: tetap kirim lama_produksi untuk update jika jenis hewan berubah
             const payload = selectedId ? {
                 nm_kandang: nmKandang.trim(),
                 kapasitas: parseInt(kapasitas),
                 jumlah_hewan: parseInt(jumlahHewan),
                 jenis_hewan: jenisHewan,
                 Hasil_Produksi: hewanInfo.Hasil_Produksi,
+                lama_produksi: hewanInfo.lama_produksi,
                 keterangan: keterangan.trim()
             } : {
                 nm_kandang: nmKandang.trim(),
@@ -316,11 +337,12 @@ export default function KandangScreen() {
                 jenis_hewan: jenisHewan,
                 Hasil_Produksi: hewanInfo.Hasil_Produksi,
                 Jml_produksi: 0,
+                lama_produksi: hewanInfo.lama_produksi,
+                tgl_produksi: todayString,
                 keterangan: keterangan.trim()
             };
 
-            console.log("🔧 Request:", method, url);
-            console.log("🔧 Payload:", payload);
+            console.log("📤 Sending payload:", JSON.stringify(payload, null, 2));
 
             const res = await fetch(url, {
                 method,
@@ -331,7 +353,7 @@ export default function KandangScreen() {
                 body: JSON.stringify(payload),
             });
 
-            console.log("🔧 Response status:", res.status);
+            console.log("📥 Response status:", res.status);
 
             const contentType = res.headers.get("content-type") || "";
             let responseData: any = null;
@@ -346,7 +368,7 @@ export default function KandangScreen() {
                 responseData = null;
             }
 
-            console.log("🔧 Response data:", responseData);
+            console.log("📥 Response data:", responseData);
 
             if (res.ok) {
                 Alert.alert("Sukses", selectedId ? "Data berhasil diupdate" : "Data berhasil ditambahkan");
@@ -386,79 +408,34 @@ export default function KandangScreen() {
     };
 
     const handleDelete = (id_kandang: number) => {
-        console.log("🗑️ handleDelete DIPANGGIL! ID:", id_kandang);
-
         Alert.alert(
-            "🗑️ HAPUS KANDANG",
-            `YAKIN HAPUS "${data.find(d => d.id_kandang === id_kandang)?.nm_kandang}"?`,
+            "Hapus Kandang",
+            `Yakin ingin menghapus "${data.find(d => d.id_kandang === id_kandang)?.nm_kandang}"?`,
             [
                 {
-                    text: "❌ BATAL",
-                    style: "cancel",
-                    onPress: () => console.log("🛑 User pilih BATAL")
+                    text: "Batal",
+                    style: "cancel"
                 },
                 {
-                    text: "🗑️ HAPUS SEKARANG",
+                    text: "Hapus",
                     style: "destructive",
-                    onPress: () => {
-                        console.log("✅ User pilih HAPUS! Panggil deleteKandang ID:", id_kandang);
-                        deleteKandang(id_kandang);
-                    }
+                    onPress: () => deleteKandang(id_kandang)
                 },
-            ],
-            {
-                cancelable: false,
-                userInterfaceStyle: 'light' // Force light mode biar jelas
-            }
+            ]
         );
-        console.log("🗑️ Alert sudah ditampilkan");
     };
 
     const deleteKandang = async (id_kandang: number) => {
-        console.log("🚀 deleteKandang START, ID:", id_kandang);
-
         try {
             setDeletingId(id_kandang);
 
-            // ✅ TRY 1: DELETE tanpa body (paling umum)
-            let response = await fetch(`${API_URLS.KANDANG}/${id_kandang}`, {
+            const response = await fetch(`${API_URLS.KANDANG}/${id_kandang}`, {
                 method: "DELETE",
                 headers: {
                     "Accept": "application/json"
                 }
             });
 
-            console.log("🧪 TRY 1 - Status:", response.status);
-
-            // ✅ TRY 2: Kalau gagal, coba dengan body kosong
-            if (!response.ok) {
-                console.log("🔄 TRY 2 - Dengan body kosong");
-                response = await fetch(`${API_URLS.KANDANG}/${id_kandang}`, {
-                    method: "DELETE",
-                    headers: {
-                        "Accept": "application/json",
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({})
-                });
-                console.log("🧪 TRY 2 - Status:", response.status);
-            }
-
-            // ✅ TRY 3: Kalau masih gagal, coba POST delete
-            if (!response.ok) {
-                console.log("🔄 TRY 3 - POST ke endpoint delete");
-                response = await fetch(`${API_URLS.KANDANG}/delete`, {
-                    method: "POST",
-                    headers: {
-                        "Accept": "application/json",
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ id_kandang })
-                });
-                console.log("🧪 TRY 3 - Status:", response.status);
-            }
-
-            // Parse response
             const contentType = response.headers.get("content-type") || "";
             let responseData: any = null;
 
@@ -472,26 +449,21 @@ export default function KandangScreen() {
                 responseData = null;
             }
 
-            console.log("📋 Final response:", { status: response.status, data: responseData });
-
             if (response.ok) {
-                console.log("✅ DELETE SUKSES!");
                 Alert.alert("Sukses", "Data berhasil dihapus");
                 fetchData();
             } else {
                 const msg = responseData?.message || `Error ${response.status}`;
-                console.error("❌ DELETE GAGAL:", msg);
                 Alert.alert("Error", `Gagal hapus: ${msg}`);
             }
         } catch (error: any) {
-            console.error("💥 DELETE ERROR:", error);
             Alert.alert("Error", "Gagal menghapus data: " + (error.message || "Unknown error"));
         } finally {
             setDeletingId(null);
-            console.log("🏁 deleteKandang FINISH");
         }
     };
-    // Fungsi untuk update produksi
+
+    // ✅ Fungsi untuk update produksi (panen)
     const handleUpdateProduction = async (kandang: Kandang) => {
         const countdownData = calculateCountdown(kandang);
 
@@ -500,16 +472,13 @@ export default function KandangScreen() {
             return;
         }
 
-        const newProduction = generateProduction(kandang, countdownData);
+        const newProduction = generateProduction(kandang);
+        const hewanInfo = HEWAN_OPTIONS.find(h => h.nama === kandang.jenis_hewan);
 
+        // Reset siklus: tgl_produksi = hari ini, Jml_produksi = hasil panen
         const payload = {
-            nm_kandang: kandang.nm_kandang,
-            kapasitas: kandang.kapasitas,
-            jumlah_hewan: kandang.jumlah_hewan,
-            jenis_hewan: kandang.jenis_hewan,
-            Hasil_Produksi: kandang.Hasil_Produksi,
             Jml_produksi: newProduction,
-            keterangan: kandang.keterangan
+            tgl_produksi: new Date().toISOString().split('T')[0] // Reset ke hari ini
         };
 
         try {
@@ -521,20 +490,28 @@ export default function KandangScreen() {
                 },
                 body: JSON.stringify(payload),
             });
+
             const contentType = res.headers.get("content-type") || "";
             let responseData: any = null;
+
             try {
-                if (contentType.includes("application/json")) responseData = await res.json();
-                else responseData = await res.text();
+                if (contentType.includes("application/json")) {
+                    responseData = await res.json();
+                } else {
+                    responseData = await res.text();
+                }
             } catch (err) {
                 responseData = null;
             }
 
             if (res.ok) {
-                Alert.alert("Sukses", `Produksi ${kandang.Hasil_Produksi} berhasil diupdate: ${newProduction}`);
+                Alert.alert(
+                    "Sukses",
+                    `Produksi ${kandang.Hasil_Produksi} berhasil!\n\nHasil: ${newProduction} ${hewanInfo?.satuan_produksi}\n\nSiklus baru dimulai hari ini.`
+                );
                 fetchData();
             } else {
-                const msg = responseData && responseData.message ? responseData.message : (typeof responseData === 'string' && responseData.length ? responseData : `Error ${res.status}`);
+                const msg = responseData?.message || responseData || `Error ${res.status}`;
                 throw new Error(msg);
             }
         } catch (error) {
@@ -583,6 +560,11 @@ export default function KandangScreen() {
                         <Text style={styles.kandangProduksi}>
                             📦 {item.Hasil_Produksi}: {item.Jml_produksi} {hewanInfo?.satuan_produksi}
                         </Text>
+                        {item.tgl_produksi && (
+                            <Text style={styles.kandangTglProduksi}>
+                                📅 Mulai: {new Date(item.tgl_produksi).toLocaleDateString('id-ID')}
+                            </Text>
+                        )}
                         {item.keterangan && (
                             <Text style={styles.kandangKeterangan}>📝 {item.keterangan}</Text>
                         )}
@@ -591,6 +573,7 @@ export default function KandangScreen() {
                         <TouchableOpacity
                             style={[styles.statusBadge, { backgroundColor: countdownData.statusColor }]}
                             onPress={() => handleUpdateProduction(item)}
+                            disabled={!countdownData.isReadyForProduction}
                         >
                             <Text style={styles.statusText}>{countdownData.statusText}</Text>
                         </TouchableOpacity>
@@ -623,7 +606,7 @@ export default function KandangScreen() {
                     <View style={styles.countdownHeader}>
                         <Text style={styles.countdownLabel}>
                             {countdownData.daysRemaining > 0
-                                ? `${countdownData.daysRemaining} Hari Menuju Produksi`
+                                ? `${countdownData.daysRemaining} Hari Menuju Produksi (${countdownData.daysPassed} hari berlalu)`
                                 : "Siap Untuk Produksi"
                             }
                         </Text>
@@ -647,7 +630,7 @@ export default function KandangScreen() {
                         style={styles.productionButton}
                         onPress={() => handleUpdateProduction(item)}
                     >
-                        <Text style={styles.productionButtonText}>🔄 Update Produksi</Text>
+                        <Text style={styles.productionButtonText}>🔄 Panen & Reset Siklus</Text>
                     </TouchableOpacity>
                 )}
 
@@ -662,12 +645,9 @@ export default function KandangScreen() {
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.deleteBtn, isDeleting && styles.btnDisabled]}
-                        onPress={() => {
-                            console.log("🗑️ DELETE BUTTON CLICKED! ID:", item.id_kandang); // ✅ DEBUG
-                            handleDelete(item.id_kandang);
-                        }}
+                        onPress={() => handleDelete(item.id_kandang)}
                         disabled={isDeleting}
-                        activeOpacity={0.7} // ✅ Visual feedback
+                        activeOpacity={0.7}
                     >
                         {isDeleting ? (
                             <ActivityIndicator size="small" color="#fff" />
@@ -809,6 +789,9 @@ export default function KandangScreen() {
                                     <View style={styles.hewanInfo}>
                                         <Text style={styles.hewanInfoText}>
                                             Hasil Produksi: {HEWAN_OPTIONS.find(h => h.nama === jenisHewan)?.Hasil_Produksi}
+                                        </Text>
+                                        <Text style={styles.hewanInfoText}>
+                                            Siklus: {HEWAN_OPTIONS.find(h => h.nama === jenisHewan)?.lama_produksi} hari
                                         </Text>
                                         <Text style={styles.hewanInfoText}>
                                             Estimasi: {HEWAN_OPTIONS.find(h => h.nama === jenisHewan)?.estimasi_produksi}
@@ -999,6 +982,12 @@ const styles = StyleSheet.create({
         color: "#666",
         marginBottom: 2,
     },
+    kandangTglProduksi: {
+        fontSize: 12,
+        color: "#4CAF50",
+        marginBottom: 2,
+        fontWeight: "500",
+    },
     kandangKeterangan: {
         fontSize: 12,
         color: "#999",
@@ -1049,9 +1038,10 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     countdownLabel: {
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: "600",
         color: "#333",
+        flex: 1,
     },
     countdownPercentage: {
         fontSize: 12,
@@ -1070,7 +1060,7 @@ const styles = StyleSheet.create({
     },
     productionButton: {
         backgroundColor: "#4CAF50",
-        paddingVertical: 8,
+        paddingVertical: 10,
         paddingHorizontal: 12,
         borderRadius: 6,
         alignItems: "center",
@@ -1078,7 +1068,7 @@ const styles = StyleSheet.create({
     },
     productionButtonText: {
         color: "white",
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: "600",
     },
     actionButtons: {
@@ -1189,14 +1179,17 @@ const styles = StyleSheet.create({
     },
     hewanInfo: {
         backgroundColor: "#F0F8FF",
-        padding: 10,
+        padding: 12,
         borderRadius: 8,
         marginBottom: 12,
+        borderLeftWidth: 3,
+        borderLeftColor: "#2196F3",
     },
     hewanInfoText: {
         fontSize: 12,
         color: "#1E3A3A",
-        marginBottom: 2,
+        marginBottom: 4,
+        fontWeight: "500",
     },
     modalButtons: {
         flexDirection: "row",

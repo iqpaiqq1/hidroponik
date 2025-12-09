@@ -59,8 +59,9 @@ export default function MenuSidebar({ activeMenu, gmail, nama }: MenuSidebarProp
         { label: "Your Profile", icon: User, path: "/(tabs)/profile" },
     ];
 
-    // ✅ FIX 2: Logout yang lebih proper dengan clear AsyncStorage
     const handleLogout = async () => {
+        console.log("🔵 Logout button clicked"); // Debug
+
         Alert.alert(
             "Konfirmasi Logout",
             "Apakah Anda yakin ingin keluar?",
@@ -73,27 +74,57 @@ export default function MenuSidebar({ activeMenu, gmail, nama }: MenuSidebarProp
                     text: "Logout",
                     onPress: async () => {
                         try {
+                            console.log("🔵 Calling logout API:", API_URLS.LOGOUT);
+
                             // Panggil API logout
-                            const res = await fetch(API_URLS.LOGOUT, { 
-                                method: "POST", // ✅ Ubah dari GET ke POST (lebih standard)
+                            const response = await fetch(API_URLS.LOGOUT, {
+                                method: "POST", // ✅ Harus POST
                                 headers: {
                                     'Content-Type': 'application/json',
-                                }
+                                    'Accept': 'application/json',
+                                },
+                                // ✅ Tambahkan timeout
+                                signal: AbortSignal.timeout(5000) // 5 detik timeout
                             });
-                            
-                            if (res.ok) {
-                                // Clear AsyncStorage
-                                await AsyncStorage.removeItem("user");
-                                await AsyncStorage.removeItem("token");
-                                
+
+                            console.log("🔵 Logout response status:", response.status);
+
+                            const result = await response.json();
+                            console.log("🔵 Logout response:", result);
+
+                            if (response.ok || response.status === 200) {
+                                // ✅ Clear AsyncStorage
+                                await AsyncStorage.multiRemove(['user', 'token']);
+                                console.log("🔵 AsyncStorage cleared");
+
                                 Alert.alert("Berhasil", "Logout berhasil!");
-                                router.replace("/"); // ✅ Pakai replace biar gak bisa back
+
+                                // ✅ Redirect ke login - sesuaikan path
+                                setTimeout(() => {
+                                    router.replace("/LoginScreen");
+                                }, 500);
                             } else {
-                                Alert.alert("Gagal", "Gagal logout dari server");
+                                throw new Error(result.message || "Logout gagal");
                             }
-                        } catch (error) {
-                            console.log("Logout error:", error);
-                            Alert.alert("Error", "Server tidak merespons");
+
+                        } catch (error: any) {
+                            console.log("🔴 Logout error:", error);
+
+                            // ✅ Tetap clear storage meski API error
+                            await AsyncStorage.multiRemove(['user', 'token']);
+
+                            Alert.alert(
+                                "Logout Lokal",
+                                "Anda telah logout dari perangkat (koneksi server gagal)",
+                                [
+                                    {
+                                        text: "OK",
+                                        onPress: () => {
+                                            router.replace("/LoginScreen");
+                                        }
+                                    }
+                                ]
+                            );
                         }
                     },
                     style: "destructive"

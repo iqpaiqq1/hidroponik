@@ -286,19 +286,19 @@ export default function DashboardPetugas() {
             <QuickAction
               title="Lihat Pengiriman"
               icon={<Eye size={20} color="#FFF" />}
-              onPress={() => router.push("/(tabs)/pengiriman/pengiriman")}
+              onPress={() => router.push({ pathname: "/(tabs)/pengiriman/pengirimanDashboard", params: { gmail: userData.gmail, nama: userData.nama } })}
               color="#4A7C2C"
             />
             <QuickAction
               title="Data Panen"
               icon={<Package size={20} color="#FFF" />}
-              onPress={() => router.push("/(tabs)/laporan/panen")}
+              onPress={() => router.push({ pathname: "/(tabs)/laporan/panen", params: { gmail: userData.gmail, nama: userData.nama } })}
               color="#F59E0B"
             />
             <QuickAction
               title="Kelola Kandang"
               icon={<Users size={20} color="#FFF" />}
-              onPress={() => router.push("/(tabs)/laporan/ternak")}
+              onPress={() => router.push({ pathname: "/(tabs)/laporan/ternak", params: { gmail: userData.gmail, nama: userData.nama } })}
               color="#3B82F6"
             />
             <QuickAction

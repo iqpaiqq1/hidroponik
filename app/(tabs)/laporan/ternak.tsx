@@ -141,7 +141,7 @@ export default function LaporanTernakScreen() {
                         style={styles.navButton}
                         onPress={() =>
                             router.push({
-                                pathname: "/(tabs)/laporan/pengiriman",
+                                pathname: "/(tabs)/pengiriman/pengirimanDashboard",
                                 params: { gmail, nama },
                             })
                         }
