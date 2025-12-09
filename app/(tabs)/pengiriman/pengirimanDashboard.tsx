@@ -6,14 +6,13 @@ import {
   TouchableOpacity, 
   StyleSheet,
   Alert,
-  Modal,
-  TextInput,
   ActivityIndicator,
   FlatList
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import MenuSidebar from "../sidebar";
 import { API_URLS } from "../../api/apiConfig";
+import FormModal, { User } from "./formModal";
 
 // Define TypeScript interfaces
 interface Pengiriman {
@@ -47,12 +46,7 @@ interface Panen {
   id_tumbuhan: number;
 }
 
-interface User {
-  id: number;
-  nama: string;
-  email: string;
-  role: string;
-}
+// Interface User sudah diimport dari formModal
 
 export default function PengirimanDashboard() {
   const params = useLocalSearchParams();
@@ -66,44 +60,100 @@ export default function PengirimanDashboard() {
   const [kurirData, setKurirData] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
+  const [selectedPengiriman, setSelectedPengiriman] = useState<Pengiriman | null>(null);
   
-  // State untuk form
-  const [selectedJenis, setSelectedJenis] = useState<"supply" | "panen">("supply");
-  const [selectedProduk, setSelectedProduk] = useState("");
-  const [jumlahDikirim, setJumlahDikirim] = useState("");
-  const [tujuan, setTujuan] = useState("");
-  const [keterangan, setKeterangan] = useState("");
-  const [statusPengiriman, setStatusPengiriman] = useState<"pending" | "selesai">("pending");
-  const [selectedKurir, setSelectedKurir] = useState("");
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-
   // Fetch data dari API
   const fetchData = async () => {
     try {
       setLoading(true);
       
-      // Fetch data dengan error handling
-      const pengirimanPromise = fetch(API_URLS.PENGIRIMAN).then(res => res.ok ? res.json() : []);
-      const supplyPromise = fetch(API_URLS.SUPPLY).then(res => res.ok ? res.json() : []);
-      const panenPromise = fetch(API_URLS.PANEN).then(res => res.ok ? res.json() : []);
-      const userPromise = fetch(API_URLS.USER).then(res => res.ok ? res.json() : []);
-
+      console.log("🚀 [DASHBOARD] Fetching data from API...");
+      
+      // Fetch data dengan Promise.all untuk paralel fetching
       const [pengirimanRes, supplyRes, panenRes, userRes] = await Promise.all([
-        pengirimanPromise, supplyPromise, panenPromise, userPromise
+        fetch(API_URLS.PENGIRIMAN).then(res => {
+          if (!res.ok) {
+            throw new Error(`Pengiriman API error: ${res.status}`);
+          }
+          return res.json();
+        }).catch(error => {
+          console.error("Error fetching pengiriman:", error);
+          return [];
+        }),
+        
+        fetch(API_URLS.SUPPLY).then(res => {
+          if (!res.ok) {
+            throw new Error(`Supply API error: ${res.status}`);
+          }
+          return res.json();
+        }).catch(error => {
+          console.error("Error fetching supply:", error);
+          return [];
+        }),
+        
+        fetch(API_URLS.PANEN).then(res => {
+          if (!res.ok) {
+            throw new Error(`Panen API error: ${res.status}`);
+          }
+          return res.json();
+        }).catch(error => {
+          console.error("Error fetching panen:", error);
+          return [];
+        }),
+        
+        fetch(API_URLS.USER).then(res => {
+          if (!res.ok) {
+            throw new Error(`User API error: ${res.status}`);
+          }
+          return res.json();
+        }).catch(error => {
+          console.error("Error fetching user:", error);
+          return [];
+        })
       ]);
 
-      setPengirimanData(pengirimanRes || []);
-      setSupplyData(supplyRes || []);
-      setPanenData(panenRes || []);
+      // Handle pengiriman data
+      setPengirimanData(Array.isArray(pengirimanRes) ? pengirimanRes : []);
+      setSupplyData(Array.isArray(supplyRes) ? supplyRes : []);
+      setPanenData(Array.isArray(panenRes) ? panenRes : []);
       
-      // Filter user dengan role kurir - handle case sensitive
-      const filteredKurir = (userRes || []).filter((user: User) => 
-        user.role && user.role.toLowerCase().includes('kurir')
-      );
+      // Transform dan filter user dengan role kurir
+      const transformedUsers: User[] = Array.isArray(userRes) 
+        ? userRes.map((user: any) => ({
+            id_user: user.id_user || user.id || 0,
+            name: user.name || user.nama || '',
+            username: user.username || '',
+            gmail: user.gmail || user.email || '',
+            role: user.role || '',
+            password: user.password || '',
+            profile_picture: user.profile_picture || null,
+            
+            // Untuk kompatibilitas
+            id: user.id_user || user.id || 0,
+            nama: user.name || user.nama || '',
+            email: user.gmail || user.email || '',
+          }))
+        : [];
+      
+      // Filter hanya user dengan role kurir
+      const filteredKurir = transformedUsers.filter((user: User) => {
+        const userRole = (user.role || '').toString().toLowerCase().trim();
+        const isKurir = userRole === 'kurir';
+        
+        console.log(`🎯 [DASHBOARD] User ${user.name} role: "${userRole}", isKurir: ${isKurir}`);
+        return isKurir;
+      });
+      
       setKurirData(filteredKurir);
 
+      console.log("✅ [DASHBOARD] Data loaded successfully:");
+      console.log("- Pengiriman:", pengirimanRes?.length || 0);
+      console.log("- Supply:", supplyRes?.length || 0);
+      console.log("- Panen:", panenRes?.length || 0);
+      console.log("- Kurir:", filteredKurir.length);
+
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("❌ [DASHBOARD] Error in fetchData:", error);
       Alert.alert("Error", "Gagal mengambil data dari server");
     } finally {
       setLoading(false);
@@ -119,102 +169,70 @@ export default function PengirimanDashboard() {
   const periodeOptions = ["Semua", "Hari ini", "Minggu ini", "Bulan ini"];
 
   const filteredData = pengirimanData.filter((item) => {
+    if (!item || !item.tgl_pengiriman) return false;
     if (selectedPeriode === "Semua") return true;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const itemDate = new Date(item.tgl_pengiriman);
-    itemDate.setHours(0, 0, 0, 0);
+    
+    // Parse tanggal dari string
+    let itemDate;
+    try {
+      if (item.tgl_pengiriman.includes('-')) {
+        // Format: YYYY-MM-DD
+        const [year, month, day] = item.tgl_pengiriman.split('-').map(Number);
+        itemDate = new Date(year, month - 1, day);
+      } else if (item.tgl_pengiriman.includes('/')) {
+        // Format: DD/MM/YYYY
+        const [day, month, year] = item.tgl_pengiriman.split('/').map(Number);
+        itemDate = new Date(year, month - 1, day);
+      } else {
+        itemDate = new Date(item.tgl_pengiriman);
+      }
+      
+      itemDate.setHours(0, 0, 0, 0);
+      
+      if (isNaN(itemDate.getTime())) {
+        return false;
+      }
 
-    switch (selectedPeriode) {
-      case "Hari ini":
-        return itemDate.getTime() === today.getTime();
-      case "Minggu ini":
-        const startOfWeek = new Date(today);
-        startOfWeek.setDate(today.getDate() - today.getDay());
-        return itemDate >= startOfWeek;
-      case "Bulan ini":
-        return (
-          itemDate.getMonth() === today.getMonth() &&
-          itemDate.getFullYear() === today.getFullYear()
-        );
-      default:
-        return true;
+      switch (selectedPeriode) {
+        case "Hari ini":
+          return itemDate.getTime() === today.getTime();
+        case "Minggu ini":
+          const startOfWeek = new Date(today);
+          startOfWeek.setDate(today.getDate() - today.getDay());
+          return itemDate >= startOfWeek;
+        case "Bulan ini":
+          return (
+            itemDate.getMonth() === today.getMonth() &&
+            itemDate.getFullYear() === today.getFullYear()
+          );
+        default:
+          return true;
+      }
+    } catch (error) {
+      console.error("Error parsing date:", item.tgl_pengiriman, error);
+      return false;
     }
   });
 
   // Calculate analytics
   const totalPengiriman = filteredData.length;
-  const totalJumlahDikirim = filteredData.reduce((sum, item) => sum + (item.jumlah_dikirim || 0), 0);
-  const statusPending = filteredData.filter(i => i.status_pengiriman === "pending").length;
-  const statusSelesai = filteredData.filter(i => i.status_pengiriman === "selesai").length;
+  const totalJumlahDikirim = filteredData.reduce((sum, item) => sum + (item?.jumlah_dikirim || 0), 0);
+  const statusPending = filteredData.filter(i => i?.status_pengiriman === "pending").length;
+  const statusSelesai = filteredData.filter(i => i?.status_pengiriman === "selesai").length;
 
   // Handle CRUD Operations
-  const handleSave = async () => {
-    // Validasi form
-    if (!selectedProduk || !jumlahDikirim || !tujuan) {
-      Alert.alert("Error", "Harap isi semua field yang wajib");
-      return;
-    }
-
-    try {
-      const payload: any = {
-        tgl_pengiriman: new Date().toISOString().split('T')[0], // Format YYYY-MM-DD
-        tujuan: tujuan,
-        jumlah_dikirim: parseInt(jumlahDikirim) || 0,
-        status_pengiriman: statusPengiriman,
-        keterangan: keterangan,
-        id_kurir: selectedKurir ? parseInt(selectedKurir) : null
-      };
-
-      // Set id_supply atau id_panen berdasarkan jenis
-      if (selectedJenis === "supply") {
-        payload.id_supply = parseInt(selectedProduk);
-        payload.id_panen = null;
-      } else {
-        payload.id_panen = parseInt(selectedProduk);
-        payload.id_supply = null;
-      }
-
-      const method = selectedId ? "PUT" : "POST";
-      const url = selectedId ? `${API_URLS.PENGIRIMAN}/${selectedId}` : API_URLS.PENGIRIMAN;
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (res.ok) {
-        Alert.alert("Sukses", selectedId ? "Data berhasil diupdate" : "Data berhasil ditambahkan");
-        resetForm();
-        fetchData();
-      } else {
-        Alert.alert("Error", "Gagal menyimpan data");
-      }
-    } catch (error) {
-      console.error(error);
-      Alert.alert("Error", "Terjadi kesalahan saat menyimpan data");
-    }
+  const handleAdd = () => {
+    setSelectedPengiriman(null);
+    setModalVisible(true);
   };
 
   const handleEdit = (item: Pengiriman) => {
-    setSelectedId(item.id_pengiriman);
+    if (!item) return;
     
-    // Tentukan jenis berdasarkan data yang ada
-    if (item.id_supply) {
-      setSelectedJenis("supply");
-      setSelectedProduk(item.id_supply.toString());
-    } else if (item.id_panen) {
-      setSelectedJenis("panen");
-      setSelectedProduk(item.id_panen.toString());
-    }
-    
-    setJumlahDikirim(item.jumlah_dikirim?.toString() || "");
-    setTujuan(item.tujuan || "");
-    setKeterangan(item.keterangan || "");
-    setStatusPengiriman(item.status_pengiriman || "pending");
-    setSelectedKurir(item.id_kurir?.toString() || "");
+    setSelectedPengiriman(item);
     setModalVisible(true);
   };
 
@@ -249,35 +267,6 @@ export default function PengirimanDashboard() {
     );
   };
 
-  const resetForm = () => {
-    setSelectedJenis("supply");
-    setSelectedProduk("");
-    setJumlahDikirim("");
-    setTujuan("");
-    setKeterangan("");
-    setStatusPengiriman("pending");
-    setSelectedKurir("");
-    setSelectedId(null);
-    setModalVisible(false);
-  };
-
-  // Get available products based on selected type
-  const getAvailableProducts = () => {
-    if (selectedJenis === "supply") {
-      return supplyData.map(s => ({
-        id: s.id_supply,
-        name: `${s.nm_supply} (${s.jenis_supply})`,
-        stok: s.stok || 0
-      }));
-    } else {
-      return panenData.map(p => ({
-        id: p.id_panen,
-        name: `${p.jenis_panen} (${p.kualitas})`,
-        stok: p.jumlah || 0
-      }));
-    }
-  };
-
   const getStatusColor = (status: "pending" | "selesai") => {
     switch (status) {
       case "selesai":
@@ -290,103 +279,150 @@ export default function PengirimanDashboard() {
   };
 
   const getNamaProduk = (item: Pengiriman) => {
-    if (item.supply) {
+    if (item?.supply && item.supply.nm_supply) {
       return `${item.supply.nm_supply} (Supply)`;
-    } else if (item.panen) {
+    } else if (item?.panen && item.panen.jenis_panen) {
       return `${item.panen.jenis_panen} (Panen)`;
     }
-    return "Produk";
+    
+    // Fallback: cari dari supplyData atau panenData
+    if (item?.id_supply) {
+      const supply = supplyData.find(s => s.id_supply === item.id_supply);
+      if (supply) return `${supply.nm_supply || 'Supply'} (Supply)`;
+    }
+    
+    if (item?.id_panen) {
+      const panen = panenData.find(p => p.id_panen === item.id_panen);
+      if (panen) return `${panen.jenis_panen || 'Panen'} (Panen)`;
+    }
+    
+    return "Produk Tidak Diketahui";
   };
 
   const getNamaKurir = (item: Pengiriman) => {
-    if (item.kurir) {
-      return item.kurir.nama;
+    if (item?.kurir && item.kurir.name) {
+      return item.kurir.name;
     }
     
-    // Cari kurir dari kurirData
-    const kurir = kurirData.find(k => k.id === item.id_kurir);
-    return kurir ? kurir.nama : "Belum ada kurir";
+    // Cari kurir dari kurirData - PERHATIAN: id_kurir harus dicocokkan dengan id_user
+    if (item?.id_kurir) {
+      const kurir = kurirData.find(k => k.id_user === item.id_kurir);
+      return kurir ? kurir.name : "Belum ada kurir";
+    }
+    
+    return "Belum ada kurir";
   };
 
-  const renderPengirimanItem = ({ item }: { item: Pengiriman }) => (
-    <View style={styles.dataCard}>
-      <View style={styles.dataHeader}>
-        <Text style={styles.dataId}>PGR{item.id_pengiriman.toString().padStart(3, '0')}</Text>
-        <View style={[
-          styles.statusBadge,
-          { backgroundColor: getStatusColor(item.status_pengiriman).backgroundColor }
-        ]}>
-          <Text style={[
-            styles.statusText,
-            { color: getStatusColor(item.status_pengiriman).color }
+  const formatDateDisplay = (dateString: string) => {
+    if (!dateString) return 'Tanggal tidak tersedia';
+    
+    try {
+      let date;
+      if (dateString.includes('-')) {
+        // Format: YYYY-MM-DD
+        const [year, month, day] = dateString.split('-').map(Number);
+        date = new Date(year, month - 1, day);
+      } else if (dateString.includes('/')) {
+        // Format: DD/MM/YYYY
+        const [day, month, year] = dateString.split('/').map(Number);
+        date = new Date(year, month - 1, day);
+      } else {
+        date = new Date(dateString);
+      }
+      
+      if (isNaN(date.getTime())) {
+        return dateString;
+      }
+      
+      return date.toLocaleDateString("id-ID", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+    } catch (error) {
+      return dateString;
+    }
+  };
+
+  const renderPengirimanItem = ({ item }: { item: Pengiriman }) => {
+    if (!item) return null;
+    
+    return (
+      <View style={styles.dataCard}>
+        <View style={styles.dataHeader}>
+          <Text style={styles.dataId}>PGR{item.id_pengiriman?.toString().padStart(3, '0') || '000'}</Text>
+          <View style={[
+            styles.statusBadge,
+            { backgroundColor: getStatusColor(item.status_pengiriman).backgroundColor }
           ]}>
-            {item.status_pengiriman === "selesai" ? "✅ Selesai" : "⏳ Pending"}
+            <Text style={[
+              styles.statusText,
+              { color: getStatusColor(item.status_pengiriman).color }
+            ]}>
+              {item.status_pengiriman === "selesai" ? "✅ Selesai" : "⏳ Pending"}
+            </Text>
+          </View>
+        </View>
+        
+        <Text style={styles.dataDate}>
+          {formatDateDisplay(item.tgl_pengiriman)}
+        </Text>
+        
+        <View style={styles.dataRow}>
+          <Text style={styles.dataLabel}>Produk:</Text>
+          <Text style={styles.dataValue}>{getNamaProduk(item)}</Text>
+        </View>
+
+        <View style={styles.dataRow}>
+          <Text style={styles.dataLabel}>Jenis:</Text>
+          <Text style={styles.dataValue}>
+            {item.id_supply ? "📦 Supply" : "🌱 Hasil Panen"}
           </Text>
         </View>
-      </View>
-      
-      <Text style={styles.dataDate}>
-        {new Date(item.tgl_pengiriman).toLocaleDateString("id-ID", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        })}
-      </Text>
-      
-      <View style={styles.dataRow}>
-        <Text style={styles.dataLabel}>Produk:</Text>
-        <Text style={styles.dataValue}>{getNamaProduk(item)}</Text>
-      </View>
-
-      <View style={styles.dataRow}>
-        <Text style={styles.dataLabel}>Jenis:</Text>
-        <Text style={styles.dataValue}>
-          {item.id_supply ? "📦 Supply" : "🌱 Hasil Panen"}
-        </Text>
-      </View>
-      
-      <View style={styles.dataDetails}>
-        <View style={styles.dataDetail}>
-          <Text style={styles.dataDetailLabel}>Jumlah:</Text>
-          <Text style={styles.dataDetailValue}>{item.jumlah_dikirim || 0} unit</Text>
+        
+        <View style={styles.dataDetails}>
+          <View style={styles.dataDetail}>
+            <Text style={styles.dataDetailLabel}>Jumlah:</Text>
+            <Text style={styles.dataDetailValue}>{item.jumlah_dikirim || 0} unit</Text>
+          </View>
         </View>
-      </View>
-      
-      <View style={styles.dataRow}>
-        <Text style={styles.dataLabel}>Tujuan:</Text>
-        <Text style={styles.dataValue}>{item.tujuan}</Text>
-      </View>
-
-      <View style={styles.dataRow}>
-        <Text style={styles.dataLabel}>Kurir:</Text>
-        <Text style={styles.dataValue}>{getNamaKurir(item)}</Text>
-      </View>
-      
-      {item.keterangan && (
+        
         <View style={styles.dataRow}>
-          <Text style={styles.dataLabel}>Keterangan:</Text>
-          <Text style={styles.dataValue}>{item.keterangan}</Text>
+          <Text style={styles.dataLabel}>Tujuan:</Text>
+          <Text style={styles.dataValue}>{item.tujuan || 'Tidak ditentukan'}</Text>
         </View>
-      )}
 
-      <View style={styles.actionButtons}>
-        <TouchableOpacity
-          style={styles.deleteBtn}
-          onPress={() => handleDelete(item.id_pengiriman)}
-        >
-          <Text style={styles.btnIcon}>🗑️</Text>
-          <Text style={styles.btnText}>Hapus</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.editBtn}
-          onPress={() => handleEdit(item)}
-        >
-          <Text style={styles.btnIcon}>✏️</Text>
-          <Text style={styles.btnText}>Edit</Text>
-        </TouchableOpacity>
+        <View style={styles.dataRow}>
+          <Text style={styles.dataLabel}>Kurir:</Text>
+          <Text style={styles.dataValue}>{getNamaKurir(item)}</Text>
+        </View>
+        
+        {item.keterangan && (
+          <View style={styles.dataRow}>
+            <Text style={styles.dataLabel}>Keterangan:</Text>
+            <Text style={styles.dataValue}>{item.keterangan}</Text>
+          </View>
+        )}
+
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={styles.deleteBtn}
+            onPress={() => handleDelete(item.id_pengiriman)}
+          >
+            <Text style={styles.btnIcon}>🗑️</Text>
+            <Text style={styles.btnText}>Hapus</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.editBtn}
+            onPress={() => handleEdit(item)}
+          >
+            <Text style={styles.btnIcon}>✏️</Text>
+            <Text style={styles.btnText}>Edit</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   if (loading) {
     return (
@@ -416,7 +452,7 @@ export default function PengirimanDashboard() {
           <View style={styles.addButtonContainer}>
             <TouchableOpacity
               style={styles.addButton}
-              onPress={() => setModalVisible(true)}
+              onPress={handleAdd}
             >
               <Text style={styles.addButtonText}>+ Tambah Pengiriman</Text>
             </TouchableOpacity>
@@ -478,7 +514,7 @@ export default function PengirimanDashboard() {
                 <Text style={styles.emptyText}>Tidak ada data pengiriman</Text>
                 <TouchableOpacity
                   style={styles.addButtonSmall}
-                  onPress={() => setModalVisible(true)}
+                  onPress={handleAdd}
                 >
                   <Text style={styles.addButtonSmallText}>+ Tambah Data</Text>
                 </TouchableOpacity>
@@ -486,7 +522,7 @@ export default function PengirimanDashboard() {
             ) : (
               <FlatList
                 data={filteredData}
-                keyExtractor={(item) => item.id_pengiriman.toString()}
+                keyExtractor={(item) => item?.id_pengiriman?.toString() || Math.random().toString()}
                 renderItem={renderPengirimanItem}
                 scrollEnabled={false}
               />
@@ -495,178 +531,23 @@ export default function PengirimanDashboard() {
         </ScrollView>
       </View>
 
-      {/* Modal Form */}
-      <Modal
-        animationType="slide"
-        transparent={true}
+      {/* Form Modal */}
+      <FormModal
         visible={modalVisible}
-        onRequestClose={resetForm}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <ScrollView 
-              style={styles.modalScrollView}
-              contentContainerStyle={styles.modalScrollContent}
-              showsVerticalScrollIndicator={true}
-            >
-              <Text style={styles.modalTitle}>
-                {selectedId ? "Edit Pengiriman" : "Tambah Pengiriman"}
-              </Text>
-
-              {/* Jenis Produk */}
-              <Text style={styles.inputLabel}>Jenis Produk</Text>
-              <View style={styles.radioContainer}>
-                <TouchableOpacity
-                  style={[
-                    styles.radioButton,
-                    selectedJenis === "supply" && styles.radioButtonActive
-                  ]}
-                  onPress={() => setSelectedJenis("supply")}
-                >
-                  <Text style={[
-                    styles.radioText,
-                    selectedJenis === "supply" && styles.radioTextActive
-                  ]}>
-                    📦 Supply
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.radioButton,
-                    selectedJenis === "panen" && styles.radioButtonActive
-                  ]}
-                  onPress={() => setSelectedJenis("panen")}
-                >
-                  <Text style={[
-                    styles.radioText,
-                    selectedJenis === "panen" && styles.radioTextActive
-                  ]}>
-                    🌱 Hasil Panen
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Pilih Produk */}
-              <Text style={styles.inputLabel}>Pilih Produk *</Text>
-              <View style={styles.productListContainer}>
-                {getAvailableProducts().map((product) => (
-                  <TouchableOpacity
-                    key={product.id}
-                    style={[
-                      styles.productOption,
-                      selectedProduk === product.id.toString() && styles.productOptionActive
-                    ]}
-                    onPress={() => setSelectedProduk(product.id.toString())}
-                  >
-                    <Text style={[
-                      styles.productText,
-                      selectedProduk === product.id.toString() && styles.productTextActive
-                    ]}>
-                      {product.name}
-                    </Text>
-                    <Text style={styles.stokText}>Stok: {product.stok}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <TextInput
-                placeholder="Jumlah Dikirim *"
-                style={styles.input}
-                value={jumlahDikirim}
-                keyboardType="numeric"
-                onChangeText={setJumlahDikirim}
-              />
-
-              <TextInput
-                placeholder="Tujuan Pengiriman *"
-                style={styles.input}
-                value={tujuan}
-                onChangeText={setTujuan}
-              />
-
-              {/* Pilih Kurir */}
-              <Text style={styles.inputLabel}>Pilih Kurir</Text>
-              <View style={styles.productListContainer}>
-                {kurirData.map((kurir) => (
-                  <TouchableOpacity
-                    key={kurir.id}
-                    style={[
-                      styles.productOption,
-                      selectedKurir === kurir.id.toString() && styles.productOptionActive
-                    ]}
-                    onPress={() => setSelectedKurir(kurir.id.toString())}
-                  >
-                    <Text style={[
-                      styles.productText,
-                      selectedKurir === kurir.id.toString() && styles.productTextActive
-                    ]}>
-                      {kurir.nama}
-                    </Text>
-                    <Text style={styles.stokText}>{kurir.email}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <TextInput
-                placeholder="Keterangan (opsional)"
-                style={[styles.input, styles.textArea]}
-                value={keterangan}
-                onChangeText={setKeterangan}
-                multiline
-                numberOfLines={3}
-              />
-
-              {/* Status */}
-              <Text style={styles.inputLabel}>Status Pengiriman</Text>
-              <View style={styles.radioContainer}>
-                <TouchableOpacity
-                  style={[
-                    styles.radioButton,
-                    statusPengiriman === "pending" && styles.radioButtonActive
-                  ]}
-                  onPress={() => setStatusPengiriman("pending")}
-                >
-                  <Text style={[
-                    styles.radioText,
-                    statusPengiriman === "pending" && styles.radioTextActive
-                  ]}>
-                    ⏳ Pending
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.radioButton,
-                    statusPengiriman === "selesai" && styles.radioButtonActive
-                  ]}
-                  onPress={() => setStatusPengiriman("selesai")}
-                >
-                  <Text style={[
-                    styles.radioText,
-                    statusPengiriman === "selesai" && styles.radioTextActive
-                  ]}>
-                    ✅ Selesai
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={[styles.modalBtn, styles.cancelBtn]}
-                  onPress={resetForm}
-                >
-                  <Text style={styles.cancelBtnText}>Batal</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalBtn, styles.saveBtn]}
-                  onPress={handleSave}
-                >
-                  <Text style={styles.saveBtnText}>Simpan</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => {
+          setModalVisible(false);
+          setSelectedPengiriman(null);
+        }}
+        onSubmit={() => {
+          fetchData();
+          setModalVisible(false);
+          setSelectedPengiriman(null);
+        }}
+        selectedItem={selectedPengiriman}
+        supplyData={supplyData}
+        panenData={panenData}
+        kurirData={kurirData}
+      />
     </View>
   );
 }
@@ -916,128 +797,5 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 13,
     fontWeight: '600',
-  },
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    width: '90%',
-    maxHeight: '85%',
-  },
-  modalScrollView: {
-    flex: 1,
-  },
-  modalScrollContent: {
-    padding: 24,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1E3A3A',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    fontSize: 14,
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  radioContainer: {
-    flexDirection: 'row',
-    marginBottom: 16,
-    gap: 8,
-  },
-  radioButton: {
-    flex: 1,
-    padding: 12,
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  radioButtonActive: {
-    backgroundColor: '#1E3A3A',
-  },
-  radioText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#6b7280',
-  },
-  radioTextActive: {
-    color: 'white',
-  },
-  productListContainer: {
-    marginBottom: 12,
-  },
-  productOption: {
-    padding: 12,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-  },
-  productOptionActive: {
-    backgroundColor: '#1E3A3A',
-    borderColor: '#1E3A3A',
-  },
-  productText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: 4,
-  },
-  productTextActive: {
-    color: 'white',
-  },
-  stokText: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 20,
-  },
-  modalBtn: {
-    flex: 1,
-    padding: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  cancelBtn: {
-    backgroundColor: '#F5F5F5',
-  },
-  cancelBtnText: {
-    color: '#757575',
-    fontWeight: '600',
-    fontSize: 15,
-  },
-  saveBtn: {
-    backgroundColor: '#1E3A3A',
-  },
-  saveBtnText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 15,
   },
 });
