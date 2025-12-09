@@ -11,7 +11,9 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Platform,
 } from "react-native";
+import DateTimePicker from '@react-native-community/datetimepicker';
 import MenuSidebar from "../sidebar";
 import { API_URLS } from "../../api/apiConfig";
 
@@ -22,6 +24,10 @@ type Kandang = {
   jumlah_hewan: number;
   jenis_hewan: string;
   keterangan: string;
+  Hasil_Produksi: string;
+  Jml_produksi: number;
+  tgl_produksi: string;
+  lama_produksi: string;
 };
 
 export default function KandangScreen() {
@@ -37,6 +43,11 @@ export default function KandangScreen() {
   const [jumlahHewan, setJumlahHewan] = useState("");
   const [jenisHewan, setJenisHewan] = useState("");
   const [keterangan, setKeterangan] = useState("");
+  const [hasilProduksi, setHasilProduksi] = useState("");
+  const [jmlProduksi, setJmlProduksi] = useState("");
+  const [tglProduksi, setTglProduksi] = useState(new Date());
+  const [lamaProduksi, setLamaProduksi] = useState("");
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const fetchData = async () => {
@@ -57,9 +68,35 @@ export default function KandangScreen() {
     fetchData();
   }, []);
 
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+
+    if (selectedDate) {
+      setTglProduksi(selectedDate);
+    }
+  };
+
+  const formatDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatDisplayDate = (date: Date) => {
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    };
+    return date.toLocaleDateString('id-ID', options);
+  };
+
   const handleSave = async () => {
-    if (!nmKandang || !kapasitas || !jumlahHewan || !jenisHewan) {
-      return Alert.alert("Error", "Field wajib harus diisi");
+    if (!nmKandang || !kapasitas || !jumlahHewan || !jenisHewan || !hasilProduksi || !jmlProduksi || !lamaProduksi) {
+      return Alert.alert("Error", "Semua field wajib harus diisi");
     }
 
     const payload = {
@@ -68,6 +105,10 @@ export default function KandangScreen() {
       jumlah_hewan: parseInt(jumlahHewan),
       jenis_hewan: jenisHewan,
       keterangan: keterangan || "",
+      Hasil_Produksi: hasilProduksi,
+      Jml_produksi: parseInt(jmlProduksi),
+      tgl_produksi: formatDate(tglProduksi),
+      lama_produksi: lamaProduksi,
     };
 
     try {
@@ -113,6 +154,10 @@ export default function KandangScreen() {
     setJumlahHewan("");
     setJenisHewan("");
     setKeterangan("");
+    setHasilProduksi("");
+    setJmlProduksi("");
+    setTglProduksi(new Date());
+    setLamaProduksi("");
     setSelectedId(null);
     setModalVisible(false);
   };
@@ -124,6 +169,10 @@ export default function KandangScreen() {
     setJumlahHewan(item.jumlah_hewan.toString());
     setJenisHewan(item.jenis_hewan);
     setKeterangan(item.keterangan || "");
+    setHasilProduksi(item.Hasil_Produksi || "");
+    setJmlProduksi(item.Jml_produksi?.toString() || "");
+    setTglProduksi(item.tgl_produksi ? new Date(item.tgl_produksi) : new Date());
+    setLamaProduksi(item.lama_produksi || "");
     setModalVisible(true);
   };
 
@@ -200,6 +249,9 @@ export default function KandangScreen() {
           <View style={styles.kandangInfo}>
             <Text style={styles.kandangName}>{item.nm_kandang}</Text>
             <Text style={styles.kandangJenis}>🐾 {item.jenis_hewan}</Text>
+            {item.Hasil_Produksi && (
+              <Text style={styles.kandangProduksi}>🥚 {item.Hasil_Produksi}</Text>
+            )}
             {item.keterangan && (
               <Text style={styles.kandangKeterangan}>📝 {item.keterangan}</Text>
             )}
@@ -327,34 +379,97 @@ export default function KandangScreen() {
               </Text>
 
               <ScrollView showsVerticalScrollIndicator={false}>
+                <Text style={styles.inputLabel}>Nama Kandang *</Text>
                 <TextInput
-                  placeholder="Nama Kandang"
+                  placeholder="Contoh: Kandang A1"
                   style={styles.input}
                   value={nmKandang}
                   onChangeText={setNmKandang}
                 />
+
+                <Text style={styles.inputLabel}>Kapasitas Maksimal *</Text>
                 <TextInput
-                  placeholder="Kapasitas Maksimal"
+                  placeholder="Contoh: 100"
                   style={styles.input}
                   value={kapasitas}
-                  keyboardType="numeric"
+                  keyboardType="number-pad"
                   onChangeText={setKapasitas}
                 />
+
+                <Text style={styles.inputLabel}>Jumlah Hewan Saat Ini *</Text>
                 <TextInput
-                  placeholder="Jumlah Hewan"
+                  placeholder="Contoh: 50"
                   style={styles.input}
                   value={jumlahHewan}
-                  keyboardType="numeric"
+                  keyboardType="number-pad"
                   onChangeText={setJumlahHewan}
                 />
+
+                <Text style={styles.inputLabel}>Jenis Hewan *</Text>
                 <TextInput
-                  placeholder="Jenis Hewan"
+                  placeholder="Contoh: Ayam Petelur"
                   style={styles.input}
                   value={jenisHewan}
                   onChangeText={setJenisHewan}
                 />
+
+                <Text style={styles.inputLabel}>Hasil Produksi *</Text>
                 <TextInput
-                  placeholder="Keterangan"
+                  placeholder="Contoh: Telur"
+                  style={styles.input}
+                  value={hasilProduksi}
+                  onChangeText={setHasilProduksi}
+                />
+
+                <Text style={styles.inputLabel}>Jumlah Produksi per Siklus *</Text>
+                <TextInput
+                  placeholder="Contoh: 50"
+                  style={styles.input}
+                  value={jmlProduksi}
+                  keyboardType="number-pad"
+                  onChangeText={setJmlProduksi}
+                />
+
+                <Text style={styles.inputLabel}>Tanggal Mulai Produksi *</Text>
+                <TouchableOpacity
+                  style={styles.datePickerButton}
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <Text style={styles.datePickerText}>
+                    📅 {formatDisplayDate(tglProduksi)}
+                  </Text>
+                </TouchableOpacity>
+
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={tglProduksi}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handleDateChange}
+                    maximumDate={new Date()}
+                  />
+                )}
+
+                {Platform.OS === 'ios' && showDatePicker && (
+                  <TouchableOpacity
+                    style={styles.datePickerDoneButton}
+                    onPress={() => setShowDatePicker(false)}
+                  >
+                    <Text style={styles.datePickerDoneText}>Selesai</Text>
+                  </TouchableOpacity>
+                )}
+
+                <Text style={styles.inputLabel}>Lama Produksi (hari) *</Text>
+                <TextInput
+                  placeholder="Contoh: 30 atau 30 hari"
+                  style={styles.input}
+                  value={lamaProduksi}
+                  onChangeText={setLamaProduksi}
+                />
+
+                <Text style={styles.inputLabel}>Keterangan</Text>
+                <TextInput
+                  placeholder="Keterangan tambahan (opsional)"
                   style={[styles.input, styles.textArea]}
                   value={keterangan}
                   onChangeText={setKeterangan}
@@ -500,11 +615,19 @@ const styles = StyleSheet.create({
   kandangJenis: {
     fontSize: 14,
     color: "#666",
+    marginTop: 4,
+  },
+  kandangProduksi: {
+    fontSize: 13,
+    color: "#4CAF50",
+    marginTop: 2,
+    fontWeight: "500",
   },
   kandangKeterangan: {
     fontSize: 12,
     color: "#999",
     fontStyle: "italic",
+    marginTop: 2,
   },
   kandangStats: {
     alignItems: "flex-end",
@@ -564,7 +687,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 24,
     width: "90%",
-    maxHeight: "80%",
+    maxHeight: "85%",
   },
   modalTitle: {
     fontSize: 20,
@@ -573,16 +696,47 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     color: "#1E3A3A",
   },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 6,
+    marginTop: 8,
+  },
   input: {
     borderWidth: 1,
     borderColor: "#DDD",
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
+    fontSize: 14,
   },
   textArea: {
     height: 80,
     textAlignVertical: "top",
+  },
+  datePickerButton: {
+    borderWidth: 1,
+    borderColor: "#DDD",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    backgroundColor: "#F9F9F9",
+  },
+  datePickerText: {
+    fontSize: 14,
+    color: "#333",
+  },
+  datePickerDoneButton: {
+    backgroundColor: "#1E3A3A",
+    padding: 10,
+    borderRadius: 8,
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  datePickerDoneText: {
+    color: "white",
+    fontWeight: "600",
   },
   modalButtons: {
     flexDirection: "row",

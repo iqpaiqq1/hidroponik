@@ -430,7 +430,8 @@ export default function DashboardPetugas() {
                     },
                     body: JSON.stringify({
                         kualitas: kualitasKandang,
-                        jumlah_produksi: parseInt(jumlahPanenKandang)
+                        jumlah_produksi: parseInt(jumlahPanenKandang),
+                        reset_siklus: true
                     })
                 }
             );
@@ -438,7 +439,7 @@ export default function DashboardPetugas() {
             const result = await response.json();
 
             if (response.ok) {
-                Alert.alert("Sukses", "Produksi kandang berhasil dipanen! Data kandang tetap tersimpan.");
+                Alert.alert("Sukses", "Produksi kandang berhasil dipanen! Siklus produksi baru telah dimulai.");
                 setPanenKandangModalVisible(false);
                 setKualitasKandang("");
                 setJumlahPanenKandang("");
@@ -1022,7 +1023,7 @@ export default function DashboardPetugas() {
             </ScrollView>
 
             <View style={styles.bottomNav}>
-                <TouchableOpacity style={styles.navItem} onPress={() => router.push("/user/settings")}>
+                <TouchableOpacity style={styles.navItem} onPress={() => router.push("/petugas/settings copy")}>
                     <Settings size={24} color="#fff" />
                 </TouchableOpacity>
 
@@ -1032,7 +1033,7 @@ export default function DashboardPetugas() {
 
                 <TouchableOpacity
                     style={styles.navItem}
-                    onPress={() => router.push({ pathname: "/user/profile", params: { from: "dashboard" } })}
+                    onPress={() => router.push({ pathname: "/petugas/profile copy", params: { from: "dashboard" } })}
                 >
                     <User size={24} color="#fff" />
                 </TouchableOpacity>

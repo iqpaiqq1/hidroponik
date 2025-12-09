@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import MenuSidebar from "../sidebar";
 import { router, useLocalSearchParams } from "expo-router";
-import { API_URLS } from "../../api/apiConfig"
+import { API_URLS } from "../../api/apiConfig";
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 import {
   View,
@@ -13,6 +14,8 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Platform,
+  ScrollView,
 } from "react-native";
 
 type Pakan = {
@@ -23,10 +26,7 @@ type Pakan = {
   stok_maksimal?: number;
 };
 
-
-
 export default function DataTernak() {
-  // Ambil params dari router
   const params = useLocalSearchParams();
   const gmail = (params.gmail as string) || "";
   const nama = (params.nama as string) || "";
@@ -37,16 +37,18 @@ export default function DataTernak() {
   const [nmPakan, setNmPakan] = useState("");
   const [jumlahStok, setJumlahStok] = useState("");
   const [stokMaksimal, setStokMaksimal] = useState("");
-  const [tglBeli, setTglBeli] = useState("");
+  const [tglBeli, setTglBeli] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const fetchData = async () => {
+    setLoading(true);
     try {
       const res = await fetch(API_URLS.PAKAN);
       const json = await res.json();
       setData(json);
     } catch (error) {
-      console.error(error);
+      console.error("Fetch error:", error);
       Alert.alert("Error", "Gagal mengambil data");
     } finally {
       setLoading(false);
@@ -57,33 +59,81 @@ export default function DataTernak() {
     fetchData();
   }, []);
 
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+
+    if (selectedDate) {
+      setTglBeli(selectedDate);
+    }
+  };
+
+  const formatDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatDisplayDate = (date: Date) => {
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    };
+    return date.toLocaleDateString('id-ID', options);
+  };
+
   const handleSave = async () => {
-    if (!nmPakan || !jumlahStok || !tglBeli || !stokMaksimal) {
+    if (!nmPakan || !jumlahStok || !stokMaksimal) {
       return Alert.alert("Error", "Semua field harus diisi");
     }
 
-    try {
-      const method = selectedId ? "PUT" : "POST";
-      const url = selectedId ? `${API_URLS}/${selectedId}` : API_URLS.PAKAN;
+    const payload = {
+      nm_pakan: nmPakan,
+      jumlah_stok: parseInt(jumlahStok),
+      stok_maksimal: parseInt(stokMaksimal),
+      tgl_beli: formatDate(tglBeli),
+    };
 
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nm_pakan: nmPakan,
-          jumlah_stok: parseInt(jumlahStok),
-          stok_maksimal: parseInt(stokMaksimal),
-          tgl_beli: tglBeli,
-        }),
-      });
+    try {
+      const url = selectedId
+        ? `${API_URLS.PAKAN}/${selectedId}`
+        : API_URLS.PAKAN;
+
+      const options: RequestInit = {
+        method: selectedId ? "PUT" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify(payload),
+      };
+
+      console.log("Request URL:", url);
+      console.log("Request Method:", options.method);
+      console.log("Request Payload:", payload);
+
+      const res = await fetch(url, options);
+
+      console.log("Response status:", res.status);
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("Error response:", errorText);
+        throw new Error(`HTTP ${res.status}: ${errorText}`);
+      }
 
       const json = await res.json();
+      console.log("Response data:", json);
+
       Alert.alert("Sukses", json.message || "Berhasil disimpan");
       resetForm();
       fetchData();
     } catch (error) {
-      console.error(error);
-      Alert.alert("Error", "Gagal menyimpan data");
+      console.error("Save error:", error);
+      Alert.alert("Error", `Gagal menyimpan data: ${error}`);
     }
   };
 
@@ -91,7 +141,7 @@ export default function DataTernak() {
     setNmPakan("");
     setJumlahStok("");
     setStokMaksimal("");
-    setTglBeli("");
+    setTglBeli(new Date());
     setSelectedId(null);
     setModalVisible(false);
   };
@@ -101,13 +151,13 @@ export default function DataTernak() {
     setNmPakan(item.nm_pakan);
     setJumlahStok(item.jumlah_stok.toString());
     setStokMaksimal(item.stok_maksimal?.toString() || "");
-    setTglBeli(item.tgl_beli);
+    setTglBeli(item.tgl_beli ? new Date(item.tgl_beli) : new Date());
     setModalVisible(true);
   };
 
   const handleDelete = async (id_pakan: number) => {
     try {
-      const response = await fetch(`http://10.102.220.183:8000/api/pakan/${id_pakan}`, {
+      const response = await fetch(`http://172.24.169.183:8000/api/pakan/${id_pakan}`, {
         method: "DELETE",
       });
 
@@ -125,7 +175,7 @@ export default function DataTernak() {
       alert("❌ Terjadi kesalahan koneksi ke server");
     }
   };
-
+  
   const getPercentage = (current: number, max: number = 100) => {
     return Math.round((current / max) * 100);
   };
@@ -210,28 +260,39 @@ export default function DataTernak() {
 
   return (
     <View style={styles.mainContainer}>
-      {/* Sidebar */}
       <MenuSidebar activeMenu="Ternak" gmail={gmail} nama={nama} />
 
-      {/* Content Area */}
       <View style={styles.container}>
-        {/* Top Navigation Bar */}
         <View style={styles.topNavContainer}>
           <TouchableOpacity
             style={styles.navButton}
-            onPress={() => router.push({
-              pathname: "/(tabs)/ternak/kandang",
-              params: { gmail, nama },
-            })}
+            onPress={() =>
+              router.push({
+                pathname: "/(tabs)/ternak/hewan" as any,
+                params: { gmail, nama },
+              })
+            }
+          >
+            <Text style={styles.navText}>Hewan</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.navButton}
+            onPress={() =>
+              router.push({
+                pathname: "/(tabs)/ternak/kandang" as any,
+                params: { gmail, nama },
+              })
+            }
           >
             <Text style={styles.navText}>Kandang</Text>
           </TouchableOpacity>
+
           <TouchableOpacity style={[styles.navButton, styles.navButtonActive]}>
             <Text style={[styles.navText, styles.navTextActive]}>Inventori Pakan</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Inventori Pakan Ternak</Text>
           <TouchableOpacity
@@ -242,14 +303,12 @@ export default function DataTernak() {
           </TouchableOpacity>
         </View>
 
-        {/* Warning Cards */}
         {warningItems.length > 0 && (
           <View style={styles.warningSection}>
             {warningItems.map((item) => renderWarningItem(item))}
           </View>
         )}
 
-        {/* Data List */}
         {loading ? (
           <ActivityIndicator size="large" color="#1E3A3A" style={styles.loader} />
         ) : (
@@ -261,7 +320,6 @@ export default function DataTernak() {
           />
         )}
 
-        {/* Modal Form */}
         <Modal
           animationType="slide"
           transparent={true}
@@ -274,32 +332,62 @@ export default function DataTernak() {
                 {selectedId ? "Edit Data Pakan" : "Tambah Data Pakan"}
               </Text>
 
-              <TextInput
-                placeholder="Nama Pakan"
-                style={styles.input}
-                value={nmPakan}
-                onChangeText={setNmPakan}
-              />
-              <TextInput
-                placeholder="Jumlah Stok (Kg)"
-                style={styles.input}
-                value={jumlahStok}
-                keyboardType="numeric"
-                onChangeText={setJumlahStok}
-              />
-              <TextInput
-                placeholder="Stok Maksimal (Kg)"
-                style={styles.input}
-                value={stokMaksimal}
-                keyboardType="numeric"
-                onChangeText={setStokMaksimal}
-              />
-              <TextInput
-                placeholder="Tanggal Beli (YYYY-MM-DD)"
-                style={styles.input}
-                value={tglBeli}
-                onChangeText={setTglBeli}
-              />
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <Text style={styles.inputLabel}>Nama Pakan *</Text>
+                <TextInput
+                  placeholder="Contoh: Pakan Ayam BR1"
+                  style={styles.input}
+                  value={nmPakan}
+                  onChangeText={setNmPakan}
+                />
+
+                <Text style={styles.inputLabel}>Jumlah Stok (Kg) *</Text>
+                <TextInput
+                  placeholder="Contoh: 50"
+                  style={styles.input}
+                  value={jumlahStok}
+                  keyboardType="number-pad"
+                  onChangeText={setJumlahStok}
+                />
+
+                <Text style={styles.inputLabel}>Stok Maksimal (Kg) *</Text>
+                <TextInput
+                  placeholder="Contoh: 100"
+                  style={styles.input}
+                  value={stokMaksimal}
+                  keyboardType="number-pad"
+                  onChangeText={setStokMaksimal}
+                />
+
+                <Text style={styles.inputLabel}>Tanggal Beli *</Text>
+                <TouchableOpacity
+                  style={styles.datePickerButton}
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <Text style={styles.datePickerText}>
+                    📅 {formatDisplayDate(tglBeli)}
+                  </Text>
+                </TouchableOpacity>
+
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={tglBeli}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handleDateChange}
+                    maximumDate={new Date()}
+                  />
+                )}
+
+                {Platform.OS === 'ios' && showDatePicker && (
+                  <TouchableOpacity
+                    style={styles.datePickerDoneButton}
+                    onPress={() => setShowDatePicker(false)}
+                  >
+                    <Text style={styles.datePickerDoneText}>Selesai</Text>
+                  </TouchableOpacity>
+                )}
+              </ScrollView>
 
               <View style={styles.modalButtons}>
                 <TouchableOpacity
@@ -334,7 +422,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#E8F4F8",
     padding: 20,
   },
-  // Top Navigation Styles
   topNavContainer: {
     flexDirection: "row",
     backgroundColor: "#1E3A3A",
@@ -519,6 +606,7 @@ const styles = StyleSheet.create({
     padding: 24,
     width: "90%",
     maxWidth: 400,
+    maxHeight: "80%",
   },
   modalTitle: {
     fontSize: 20,
@@ -527,6 +615,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: "center",
   },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 6,
+    marginTop: 8,
+  },
   input: {
     borderWidth: 1,
     borderColor: "#E0E0E0",
@@ -534,6 +629,29 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 12,
     fontSize: 14,
+  },
+  datePickerButton: {
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    backgroundColor: "#F9F9F9",
+  },
+  datePickerText: {
+    fontSize: 14,
+    color: "#333",
+  },
+  datePickerDoneButton: {
+    backgroundColor: "#1E3A3A",
+    padding: 10,
+    borderRadius: 8,
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  datePickerDoneText: {
+    color: "white",
+    fontWeight: "600",
   },
   modalButtons: {
     flexDirection: "row",
