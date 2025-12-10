@@ -268,7 +268,7 @@ export default function DataTernak() {
             style={styles.navButton}
             onPress={() =>
               router.push({
-                pathname: "/(tabs)/ternak/hewan" as any,
+                pathname: "/(tabs)/ternak/DataTernak" as any,
                 params: { gmail, nama },
               })
             }

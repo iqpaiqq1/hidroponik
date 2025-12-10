@@ -45,95 +45,117 @@ export default function MenuSidebar({ activeMenu, gmail, nama }: MenuSidebarProp
         return <AppLoading />;
     }
 
-    // ✅ FIX: Path yang lebih jelas dan konsisten
     const menus = [ 
         { label: "Dashboard", icon: LayoutGrid, path: "/dashboard" },
         { label: "Tanaman", icon: Leaf, path: "/(tabs)/tanaman/tanamanI" },
         { label: "Ternak", icon: Dog, path: "/(tabs)/ternak/DataTernak" },
         { label: "Sensor", icon: Cpu, path: "/(tabs)/sensor/sensorDashboard" },
         { label: "Laporan", icon: BarChart3, path: "/(tabs)/laporan/panen" },
-        // ✅ FIX 1: Ubah path pengiriman (pilih salah satu sesuai file structure lu)
-        { label: "Pengiriman", icon: Truck, path: "/(tabs)/pengiriman/pengirimanDashboard" }, // Pakai index.tsx
-        // ATAU kalau file lu namanya pengiriman.tsx:
-        // { label: "Pengiriman", icon: Truck, path: "/(tabs)/pengiriman/pengiriman" },
+        { label: "Pengiriman", icon: Truck, path: "/(tabs)/pengiriman/pengirimanDashboard" },
         { label: "Your Profile", icon: User, path: "/(tabs)/profile" },
     ];
 
-    const handleLogout = async () => {
-        console.log("🔵 Logout button clicked"); // Debug
-
+    // ✅ FIX 1: Tambahkan log untuk debug dan perbaiki handler
+    const handleLogout = () => {
+        console.log("🟢 Logout button PRESSED");
+        
         Alert.alert(
             "Konfirmasi Logout",
             "Apakah Anda yakin ingin keluar?",
             [
                 {
                     text: "Batal",
-                    style: "cancel"
+                    style: "cancel",
+                    onPress: () => console.log("🔵 Logout cancelled")
                 },
                 {
                     text: "Logout",
-                    onPress: async () => {
-                        try {
-                            console.log("🔵 Calling logout API:", API_URLS.LOGOUT);
-
-                            // Panggil API logout
-                            const response = await fetch(API_URLS.LOGOUT, {
-                                method: "POST", // ✅ Harus POST
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Accept': 'application/json',
-                                },
-                                // ✅ Tambahkan timeout
-                                signal: AbortSignal.timeout(5000) // 5 detik timeout
-                            });
-
-                            console.log("🔵 Logout response status:", response.status);
-
-                            const result = await response.json();
-                            console.log("🔵 Logout response:", result);
-
-                            if (response.ok || response.status === 200) {
-                                // ✅ Clear AsyncStorage
-                                await AsyncStorage.multiRemove(['user', 'token']);
-                                console.log("🔵 AsyncStorage cleared");
-
-                                Alert.alert("Berhasil", "Logout berhasil!");
-
-                                // ✅ Redirect ke login - sesuaikan path
-                                setTimeout(() => {
-                                    router.replace("/LoginScreen");
-                                }, 500);
-                            } else {
-                                throw new Error(result.message || "Logout gagal");
-                            }
-
-                        } catch (error: any) {
-                            console.log("🔴 Logout error:", error);
-
-                            // ✅ Tetap clear storage meski API error
-                            await AsyncStorage.multiRemove(['user', 'token']);
-
-                            Alert.alert(
-                                "Logout Lokal",
-                                "Anda telah logout dari perangkat (koneksi server gagal)",
-                                [
-                                    {
-                                        text: "OK",
-                                        onPress: () => {
-                                            router.replace("/LoginScreen");
-                                        }
-                                    }
-                                ]
-                            );
-                        }
-                    },
+                    onPress: () => performLogout(),
                     style: "destructive"
                 }
-            ]
+            ],
+            { cancelable: true }
         );
     };
 
-    // ✅ FIX 3: Handler menu dengan logging untuk debugging
+    // ✅ FIX 2: Pisahkan logic logout ke fungsi terpisah
+    const performLogout = async () => {
+        try {
+            console.log("🟢 Starting logout process...");
+            
+            // 1. Clear AsyncStorage FIRST (prioritas utama)
+            console.log("🟢 Clearing AsyncStorage...");
+            await AsyncStorage.multiRemove(['user', 'token']);
+            
+            // 2. Coba panggil API logout jika ada koneksi
+            try {
+                console.log("🟢 Calling logout API:", API_URLS.LOGOUT);
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                
+                const response = await fetch(API_URLS.LOGOUT, {
+                    method: "POST",
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                console.log("🟢 API Response status:", response.status);
+                
+                if (response.ok) {
+                    console.log("🟢 API Logout successful");
+                } else {
+                    console.log("🟡 API Logout failed but local storage cleared");
+                }
+            } catch (apiError) {
+                console.log("🟡 API call failed, continuing with local logout:", apiError);
+            }
+            
+            // 3. Tampilkan pesan sukses
+            Alert.alert(
+                "Logout Berhasil",
+                "Anda telah keluar dari aplikasi.",
+                [
+                    {
+                        text: "OK",
+                        onPress: () => {
+                            console.log("🟢 Navigating to login screen...");
+                            // ✅ FIX 3: Perbaiki path ke login
+                            // Coba salah satu dari ini:
+                            router.replace("/LoginScreen"); // Jika ada di folder auth
+                            // ATAU
+                            // router.replace("/login"); // Jika file login di root
+                            // ATAU
+                            // router.replace("/LoginScreen"); // Jika nama file persis
+                        }
+                    }
+                ]
+            );
+            
+        } catch (error) {
+            console.log("🔴 Error during logout:", error);
+            
+            // Tetap coba redirect ke login
+            Alert.alert(
+                "Info",
+                "Logout lokal berhasil dilakukan.",
+                [
+                    {
+                        text: "OK",
+                        onPress: () => {
+                            router.replace("../login");
+                        }
+                    }
+                ]
+            );
+        }
+    };
+
     const handleMenuPress = (item: any) => {
         console.log('🔵 Menu clicked:', item.label);
         console.log('🔵 Target path:', item.path);
@@ -193,8 +215,12 @@ export default function MenuSidebar({ activeMenu, gmail, nama }: MenuSidebarProp
                 ))}
             </View>
 
-            {/* Logout Button */}
-            <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+            {/* ✅ FIX 4: Perbaiki styling logout button */}
+            <TouchableOpacity 
+                onPress={handleLogout} 
+                style={styles.logoutButton}
+                activeOpacity={0.7}
+            >
                 <LogOut size={20} color="#d4c4b0" strokeWidth={2} />
                 <Text style={[styles.logoutText, { fontFamily: "Poppins_400Regular" }]}>
                     Logout
@@ -265,12 +291,16 @@ const styles = StyleSheet.create({
         marginLeft: 10,
         letterSpacing: 0.2,
     },
+    // ✅ FIX 5: Tambahkan styling untuk feedback visual
     logoutButton: {
         flexDirection: "row",
         alignItems: "center",
         paddingVertical: 12,
         paddingHorizontal: 14,
         borderRadius: 10,
+        backgroundColor: "rgba(255, 255, 255, 0.1)", // Tambahkan background
+        borderWidth: 1,
+        borderColor: "rgba(212, 196, 176, 0.3)",
     },
     logoutText: {
         color: "#d4c4b0",
