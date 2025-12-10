@@ -1,4 +1,4 @@
-export const BASE_URL = "http://172.24.169.183:8000/api";
+export const BASE_URL = "http://10.79.192.183:8000/api";
 
 export const API_URLS = {
     TANAMAN: `${BASE_URL}/tanaman`,

@@ -217,12 +217,57 @@ export default function PengirimanDashboard() {
     }
   });
 
-  // Calculate analytics
-  const totalPengiriman = filteredData.length;
-  const totalJumlahDikirim = filteredData.reduce((sum, item) => sum + (item?.jumlah_dikirim || 0), 0);
-  const statusPending = filteredData.filter(i => i?.status_pengiriman === "pending").length;
-  const statusSelesai = filteredData.filter(i => i?.status_pengiriman === "selesai").length;
 
+  // Calculate analytics - DIPERBAIKI berdasarkan status
+  const totalPengiriman = pengirimanData.length;
+
+  // PERBAIKAN PENTING: Total jumlah dikirim HANYA untuk status 'Selesai'
+  const totalJumlahDikirim = pengirimanData.reduce((sum, item) => {
+    const status = item?.status_pengiriman?.toLowerCase() || '';
+    const jumlah = item?.jumlah_dikirim || 0;
+
+    // Hanya tambahkan jika statusnya 'selesai'
+    if (status === 'selesai') {
+      return sum + Number(jumlah);
+    }
+    return sum; // Untuk pending, tidak ditambahkan
+  }, 0);
+
+  // Hitung status
+  const statusPending = pengirimanData.filter(i => {
+    const status = i?.status_pengiriman?.toLowerCase() || '';
+    return status === 'pending';
+  }).length;
+
+  const statusSelesai = pengirimanData.filter(i => {
+    const status = i?.status_pengiriman?.toLowerCase() || '';
+    return status === 'selesai';
+  }).length;
+
+  // Untuk data yang difilter (dengan logika yang sama)
+  const filteredTotalPengiriman = filteredData.length;
+
+  const filteredTotalJumlahDikirim = filteredData.reduce((sum, item) => {
+    const status = item?.status_pengiriman?.toLowerCase() || '';
+    const jumlah = item?.jumlah_dikirim || 0;
+
+    // Hanya tambahkan jika statusnya 'selesai'
+    if (status === 'selesai') {
+      return sum + Number(jumlah);
+    }
+    return sum;
+  }, 0);
+
+  const filteredStatusPending = filteredData.filter(i => {
+    const status = i?.status_pengiriman?.toLowerCase() || '';
+    return status === 'pending';
+  }).length;
+
+  const filteredStatusSelesai = filteredData.filter(i => {
+    const status = i?.status_pengiriman?.toLowerCase() || '';
+    return status === 'selesai';
+  }).length;
+  
   // Handle CRUD Operations
   const handleAdd = () => {
     setSelectedPengiriman(null);
@@ -237,34 +282,24 @@ export default function PengirimanDashboard() {
   };
 
   const handleDelete = async (id_pengiriman: number) => {
-    Alert.alert(
-      "Konfirmasi Hapus",
-      "Apakah Anda yakin ingin menghapus data pengiriman ini?",
-      [
-        { text: "Batal", style: "cancel" },
-        {
-          text: "Hapus",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const response = await fetch(`${API_URLS.PENGIRIMAN}/${id_pengiriman}`, {
-                method: "DELETE",
-              });
+    try {
+      const response = await fetch(`http://10.79.192.183:8000/api/pengiriman/${id_pengiriman}`, {
+        method: "DELETE",
+      });
 
-              if (response.ok) {
-                Alert.alert("Sukses", "Data pengiriman berhasil dihapus");
-                fetchData();
-              } else {
-                Alert.alert("Error", "Gagal menghapus data");
-              }
-            } catch (error) {
-              console.error(error);
-              Alert.alert("Error", "Gagal menghapus data");
-            }
-          },
-        },
-      ]
-    );
+      if (response.ok) {
+        const data = await response.json();
+        console.log(data.message);
+        alert("✅ Data pakan berhasil dihapus");
+        fetchData();
+      } else {
+        const errorData = await response.json();
+        alert(`⚠️ Gagal: ${errorData.message}`);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("❌ Terjadi kesalahan koneksi ke server");
+    }
   };
 
   const getStatusColor = (status: "pending" | "selesai") => {

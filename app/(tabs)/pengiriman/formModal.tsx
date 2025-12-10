@@ -86,7 +86,7 @@ const FormModal: React.FC<FormModalProps> = ({
     const [validKurirData, setValidKurirData] = useState<User[]>([]);
     const [isLoadingKurir, setIsLoadingKurir] = useState<boolean>(false);
     const [apiError, setApiError] = useState<string | null>(null);
-    
+
     const [formData, setFormData] = useState<Pengiriman>({
         id_supply: null,
         id_panen: null,
@@ -127,6 +127,7 @@ const FormModal: React.FC<FormModalProps> = ({
         return `${dayName}, ${day} ${monthName} ${year}`;
     };
 
+    // FIXED: Format tanggal untuk API harus YYYY-MM-DD
     const formatDateForAPI = (date: Date): string => {
         const year = date.getFullYear();
         const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -136,7 +137,7 @@ const FormModal: React.FC<FormModalProps> = ({
 
     const parseDateString = (dateStr: string): Date => {
         if (!dateStr) return new Date();
-        
+
         // Coba format dd/mm/yyyy
         const parts = dateStr.split('/');
         if (parts.length === 3) {
@@ -145,12 +146,12 @@ const FormModal: React.FC<FormModalProps> = ({
             const year = parseInt(parts[2], 10);
             return new Date(year, month, day);
         }
-        
+
         // Coba format yyyy-mm-dd
         if (dateStr.includes('-')) {
             return new Date(dateStr);
         }
-        
+
         return new Date();
     };
 
@@ -160,7 +161,7 @@ const FormModal: React.FC<FormModalProps> = ({
             console.log("🔍 Fetching kurir data...");
             setIsLoadingKurir(true);
             setApiError(null);
-            
+
             const response = await fetch(API_URLS.USER, {
                 method: 'GET',
                 headers: {
@@ -168,13 +169,13 @@ const FormModal: React.FC<FormModalProps> = ({
                     'Content-Type': 'application/json',
                 },
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
             }
-            
+
             const responseData = await response.json();
-            
+
             let users: any[] = [];
             if (Array.isArray(responseData)) {
                 users = responseData;
@@ -183,7 +184,7 @@ const FormModal: React.FC<FormModalProps> = ({
             } else {
                 throw new Error("Format response tidak dikenali");
             }
-            
+
             const transformedUsers: User[] = users.map((user: any) => ({
                 id_user: user.id_user || user.id || 0,
                 name: user.name || user.nama || '',
@@ -196,20 +197,20 @@ const FormModal: React.FC<FormModalProps> = ({
                 nama: user.name || user.nama || '',
                 email: user.gmail || user.email || '',
             }));
-            
+
             const filteredKurirs = transformedUsers.filter(user => {
                 if (!user || !user.id_user || !user.name) return false;
                 const userRole = (user.role || '').toString().toLowerCase().trim();
                 return userRole === 'kurir';
             });
-            
+
             if (filteredKurirs.length === 0) {
                 setApiError("Tidak ada data kurir tersedia");
                 setValidKurirData(kurirData || []);
             } else {
                 setValidKurirData(filteredKurirs);
             }
-            
+
         } catch (error: any) {
             console.error("Error fetch kurir:", error);
             setApiError(error.message || "Gagal memuat data kurir");
@@ -220,7 +221,6 @@ const FormModal: React.FC<FormModalProps> = ({
     };
 
     // ============ EFFECTS ============
-    // Product options
     useEffect(() => {
         if (selectedType === "supply") {
             const options = supplyData
@@ -243,7 +243,6 @@ const FormModal: React.FC<FormModalProps> = ({
         }
     }, [selectedType, supplyData, panenData]);
 
-    // Load kurir on modal open
     useEffect(() => {
         if (visible) {
             fetchKurirData();
@@ -253,31 +252,27 @@ const FormModal: React.FC<FormModalProps> = ({
         }
     }, [visible]);
 
-    // Set tanggal otomatis hari ini saat buka modal
     useEffect(() => {
         if (visible) {
             const today = new Date();
             const formattedToday = formatDate(today);
-            
+
             if (!selectedItem) {
-                // Untuk tambah data baru
                 setSelectedDate(today);
-                setFormData(prev => ({ 
-                    ...prev, 
-                    tgl_pengiriman: formattedToday 
+                setFormData(prev => ({
+                    ...prev,
+                    tgl_pengiriman: formattedToday
                 }));
             }
         }
     }, [visible, selectedItem]);
 
-    // Handle selected item
     useEffect(() => {
         if (!visible) return;
-        
+
         if (selectedItem) {
-            // Edit mode
             setSelectedProductId("");
-            
+
             if (selectedItem.id_supply) {
                 setSelectedType("supply");
                 setSelectedProductId(selectedItem.id_supply?.toString() || "");
@@ -285,7 +280,7 @@ const FormModal: React.FC<FormModalProps> = ({
                 setSelectedType("panen");
                 setSelectedProductId(selectedItem.id_panen?.toString() || "");
             }
-            
+
             const safeData = {
                 id_supply: selectedItem.id_supply || null,
                 id_panen: selectedItem.id_panen || null,
@@ -296,20 +291,18 @@ const FormModal: React.FC<FormModalProps> = ({
                 id_kurir: selectedItem.id_kurir || null,
                 keterangan: selectedItem.keterangan || "",
             };
-            
+
             setFormData(safeData);
-            
-            // Set tanggal
-            const dateObj = selectedItem.tgl_pengiriman 
+
+            const dateObj = selectedItem.tgl_pengiriman
                 ? parseDateString(selectedItem.tgl_pengiriman)
                 : new Date();
             setSelectedDate(dateObj);
-            
+
         } else {
-            // Add mode
             const today = new Date();
             const todayFormatted = formatDate(today);
-            
+
             setFormData({
                 id_supply: null,
                 id_panen: null,
@@ -358,7 +351,7 @@ const FormModal: React.FC<FormModalProps> = ({
     const handleProductChange = (productId: string) => {
         setSelectedProductId(productId);
         const id = productId ? parseInt(productId) : null;
-        
+
         if (selectedType === "supply") {
             setFormData(prev => ({
                 ...prev,
@@ -379,6 +372,7 @@ const FormModal: React.FC<FormModalProps> = ({
         setFormData(prev => ({ ...prev, id_kurir: id }));
     };
 
+    // FIXED: Perbaikan fungsi handleSubmit
     const handleSubmit = async () => {
         // Validasi
         if (!formData.tgl_pengiriman || !formData.tujuan || !formData.jumlah_dikirim) {
@@ -392,18 +386,28 @@ const FormModal: React.FC<FormModalProps> = ({
         }
 
         try {
-            const payload: any = {
-                tgl_pengiriman: formatDateForAPI(selectedDate),
-                tujuan: formData.tujuan,
-                jumlah_dikirim: formData.jumlah_dikirim || 0,
-                status_pengiriman: formData.status_pengiriman || "pending",
-                keterangan: formData.keterangan || "",
-            };
-
-            if (formData.id_kurir) {
-                payload.id_kurir = formData.id_kurir;
+            // CRITICAL FIX: Pastikan status_pengiriman lowercase dan valid
+            const validStatus = (formData.status_pengiriman || "pending").toString().toLowerCase();
+            if (validStatus !== "pending" && validStatus !== "selesai") {
+                Alert.alert("Error", "Status pengiriman tidak valid. Harus 'pending' atau 'selesai'");
+                return;
             }
 
+            // FIXED: Pastikan format data sesuai dengan validasi Laravel
+            const payload: any = {
+                tgl_pengiriman: formatDateForAPI(selectedDate), // Format YYYY-MM-DD
+                tujuan: formData.tujuan?.trim() || "",
+                jumlah_dikirim: parseInt(formData.jumlah_dikirim?.toString() || "0"),
+                status_pengiriman: validStatus, // CRITICAL: Pastikan lowercase
+                keterangan: formData.keterangan?.trim() || "",
+            };
+
+            // Tambahkan id_kurir jika ada
+            if (formData.id_kurir) {
+                payload.id_kurir = parseInt(formData.id_kurir.toString());
+            }
+
+            // Set id_supply atau id_panen
             if (selectedType === "supply") {
                 payload.id_supply = parseInt(selectedProductId);
                 payload.id_panen = null;
@@ -412,19 +416,26 @@ const FormModal: React.FC<FormModalProps> = ({
                 payload.id_supply = null;
             }
 
+            console.log("📤 Payload yang dikirim:", JSON.stringify(payload, null, 2));
+
             const method = selectedItem ? "PUT" : "POST";
             const url = selectedItem
                 ? `${API_URLS.PENGIRIMAN}/${selectedItem.id_pengiriman}`
                 : API_URLS.PENGIRIMAN;
 
+            console.log(`📡 ${method} ${url}`);
+
             const response = await fetch(url, {
                 method,
-                headers: { 
+                headers: {
                     "Content-Type": "application/json",
                     "Accept": "application/json"
                 },
                 body: JSON.stringify(payload),
             });
+
+            const responseData = await response.json();
+            console.log("📥 Response:", responseData);
 
             if (response.ok) {
                 Alert.alert(
@@ -436,52 +447,28 @@ const FormModal: React.FC<FormModalProps> = ({
                 onSubmit();
                 onClose();
             } else {
-                Alert.alert("Gagal", "Terjadi kesalahan server");
+                // Tampilkan error detail dari Laravel
+                const errorMessage = responseData.message || "Terjadi kesalahan server";
+                const errors = responseData.errors || {};
+
+                let errorDetail = errorMessage;
+                if (Object.keys(errors).length > 0) {
+                    errorDetail += "\n\n" + Object.entries(errors)
+                        .map(([key, msgs]: [string, any]) => `${key}: ${msgs.join(", ")}`)
+                        .join("\n");
+                }
+
+                console.error("❌ Error detail:", errorDetail);
+                Alert.alert("Gagal", errorDetail);
             }
         } catch (error: any) {
-            console.error("Error:", error);
-            Alert.alert("Error", "Tidak dapat terhubung ke server");
+            console.error("❌ Error:", error);
+            Alert.alert("Error", "Tidak dapat terhubung ke server\n" + error.message);
         }
     };
 
-    const handleDelete = async () => {
-        if (!selectedItem?.id_pengiriman) return;
-        
-        Alert.alert(
-            "Konfirmasi",
-            "Apakah kamu yakin ingin menghapus data ini?",
-            [
-                { text: "Batal", style: "cancel" },
-                {
-                    text: "Hapus",
-                    style: "destructive",
-                    onPress: async () => {
-                        try {
-                            const response = await fetch(
-                                `${API_URLS.PENGIRIMAN}/${selectedItem.id_pengiriman}`,
-                                { 
-                                    method: "DELETE",
-                                    headers: {
-                                        "Content-Type": "application/json"
-                                    }
-                                }
-                            );
-                            
-                            if (response.ok) {
-                                Alert.alert("Sukses", "Data berhasil dihapus!");
-                                onSubmit();
-                                onClose();
-                            } else {
-                                Alert.alert("Gagal", "Tidak dapat menghapus data");
-                            }
-                        } catch (error) {
-                            Alert.alert("Error", "Terjadi kesalahan koneksi!");
-                        }
-                    },
-                },
-            ]
-        );
-    };
+    // REMOVED: Fungsi handleDelete dihapus dari modal karena sudah ada di dashboard
+    // Delete seharusnya hanya dilakukan dari dashboard, bukan dari modal edit
 
     const getSelectedKurirName = (): string => {
         if (!formData.id_kurir) return "Belum dipilih";
@@ -493,7 +480,7 @@ const FormModal: React.FC<FormModalProps> = ({
         <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
             <View style={styles.overlay}>
                 <View style={styles.modalContainer}>
-                    <ScrollView 
+                    <ScrollView
                         contentContainerStyle={styles.scrollContent}
                         showsVerticalScrollIndicator={true}
                     >
@@ -542,15 +529,15 @@ const FormModal: React.FC<FormModalProps> = ({
                                     selectedValue={selectedProductId}
                                     onValueChange={handleProductChange}
                                 >
-                                    <Picker.Item 
-                                        label={`Pilih ${selectedType === "supply" ? "supply" : "panen"}...`} 
-                                        value="" 
+                                    <Picker.Item
+                                        label={`Pilih ${selectedType === "supply" ? "supply" : "panen"}...`}
+                                        value=""
                                     />
                                     {productOptions.map((product) => (
-                                        <Picker.Item 
-                                            key={product.id} 
-                                            label={product.name} 
-                                            value={product.id.toString()} 
+                                        <Picker.Item
+                                            key={product.id}
+                                            label={product.name}
+                                            value={product.id.toString()}
                                         />
                                     ))}
                                 </Picker>
@@ -561,16 +548,16 @@ const FormModal: React.FC<FormModalProps> = ({
                         <View style={styles.formGroup}>
                             <View style={styles.dateHeader}>
                                 <Text style={styles.label}>Tanggal *</Text>
-                                <TouchableOpacity 
+                                <TouchableOpacity
                                     style={styles.resetButton}
                                     onPress={handleResetToToday}
                                 >
                                     <Text style={styles.resetButtonText}>⟳ Hari Ini</Text>
                                 </TouchableOpacity>
                             </View>
-                            
-                            <TouchableOpacity 
-                                style={styles.dateInput} 
+
+                            <TouchableOpacity
+                                style={styles.dateInput}
                                 onPress={() => setShowDatePicker(true)}
                                 activeOpacity={0.7}
                             >
@@ -626,7 +613,7 @@ const FormModal: React.FC<FormModalProps> = ({
                         {/* Pilih Kurir */}
                         <View style={styles.formGroup}>
                             <Text style={styles.label}>Pilih Kurir (Opsional)</Text>
-                            
+
                             {isLoadingKurir ? (
                                 <View style={styles.loadingContainer}>
                                     <ActivityIndicator size="small" color="#1E3A3A" />
@@ -635,7 +622,7 @@ const FormModal: React.FC<FormModalProps> = ({
                             ) : apiError ? (
                                 <View style={styles.errorContainer}>
                                     <Text style={styles.errorText}>❌ {apiError}</Text>
-                                    <TouchableOpacity 
+                                    <TouchableOpacity
                                         style={styles.retryButton}
                                         onPress={fetchKurirData}
                                     >
@@ -656,20 +643,20 @@ const FormModal: React.FC<FormModalProps> = ({
                                             selectedValue={formData.id_kurir?.toString() || ""}
                                             onValueChange={handleKurirChange}
                                         >
-                                            <Picker.Item 
-                                                label="Pilih kurir..." 
-                                                value="" 
+                                            <Picker.Item
+                                                label="Pilih kurir..."
+                                                value=""
                                             />
                                             {validKurirData.map((kurir) => (
-                                                <Picker.Item 
-                                                    key={kurir.id_user} 
+                                                <Picker.Item
+                                                    key={kurir.id_user}
                                                     label={`${kurir.name} (${kurir.gmail || kurir.username || 'No email'})`}
-                                                    value={kurir.id_user.toString()} 
+                                                    value={kurir.id_user.toString()}
                                                 />
                                             ))}
                                         </Picker>
                                     </View>
-                                    
+
                                     {formData.id_kurir && (
                                         <View style={styles.selectedKurir}>
                                             <Text style={styles.selectedKurirLabel}>Kurir terpilih:</Text>
@@ -710,16 +697,8 @@ const FormModal: React.FC<FormModalProps> = ({
                             />
                         </View>
 
-                        {/* Buttons */}
+                        {/* Buttons - FIXED: Remove delete button dari modal */}
                         <View style={styles.buttonRow}>
-                            {selectedItem && (
-                                <TouchableOpacity
-                                    style={[styles.button, styles.deleteButton]}
-                                    onPress={handleDelete}
-                                >
-                                    <Text style={styles.buttonText}>🗑️ Hapus</Text>
-                                </TouchableOpacity>
-                            )}
                             <TouchableOpacity
                                 style={[styles.button, styles.saveButton]}
                                 onPress={handleSubmit}
@@ -801,7 +780,6 @@ const styles = StyleSheet.create({
         color: "#2D3748",
         marginBottom: 10,
     },
-    // Date Styles
     dateHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
@@ -867,7 +845,6 @@ const styles = StyleSheet.create({
         color: "#1E3A3A",
         fontWeight: "600",
     },
-    // Type Selector
     typeContainer: {
         flexDirection: "row",
         gap: 12,
@@ -893,7 +870,6 @@ const styles = StyleSheet.create({
     typeButtonTextActive: {
         color: "white",
     },
-    // Picker
     pickerWrapper: {
         borderWidth: 1.5,
         borderColor: "#E2E8F0",
@@ -901,7 +877,6 @@ const styles = StyleSheet.create({
         backgroundColor: "#fff",
         overflow: "hidden",
     },
-    // Input
     inputWrapper: {
         flexDirection: "row",
         alignItems: "center",
@@ -927,7 +902,6 @@ const styles = StyleSheet.create({
         borderLeftColor: "#E2E8F0",
         paddingVertical: 17,
     },
-    // Text Area
     textArea: {
         borderWidth: 1.5,
         borderColor: "#E2E8F0",
@@ -940,7 +914,6 @@ const styles = StyleSheet.create({
         textAlignVertical: "top",
         lineHeight: 22,
     },
-    // Loading & Error
     loadingContainer: {
         flexDirection: "row",
         alignItems: "center",
@@ -1004,7 +977,6 @@ const styles = StyleSheet.create({
         textAlign: "center",
         lineHeight: 16,
     },
-    // Selected Kurir
     selectedKurir: {
         flexDirection: "row",
         alignItems: "center",
@@ -1026,7 +998,6 @@ const styles = StyleSheet.create({
         color: "#1E3A3A",
         fontWeight: "700",
     },
-    // Buttons
     buttonRow: {
         flexDirection: "row",
         justifyContent: "space-between",
@@ -1043,9 +1014,6 @@ const styles = StyleSheet.create({
     },
     saveButton: {
         backgroundColor: "#1E3A3A",
-    },
-    deleteButton: {
-        backgroundColor: "#E53E3E",
     },
     cancelButton: {
         backgroundColor: "#fff",
