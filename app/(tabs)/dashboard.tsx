@@ -36,7 +36,7 @@ interface DashboardStats {
   };
 }
 
-export default function DashboardPetugas() {
+export default function Dashboard() {
   const [userData, setUserData] = useState<{ gmail: string, nama: string, role: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats>({

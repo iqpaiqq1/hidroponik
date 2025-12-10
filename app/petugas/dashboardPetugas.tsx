@@ -18,7 +18,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Leaf, Home, Settings, User, Thermometer, Droplets, Edit, MapPin, Activity, X, Clock } from "lucide-react-native";
+import { Leaf, Home, Settings, User, Thermometer, Droplets, Edit, MapPin, Activity, X, Clock, SettingsIcon, UserIcon } from "lucide-react-native";
 import { API_URLS } from "../api/apiConfig";
 import { PawPrint } from "lucide-react-native";
 
@@ -1078,22 +1078,30 @@ export default function DashboardPetugas() {
                 <View style={{ height: 100 }} />
             </ScrollView>
 
-            <View style={styles.bottomNav}>
-                <TouchableOpacity style={styles.navItem} onPress={() => router.push("/petugas/settings")}>
-                    <Settings size={24} color="#fff" />
-                </TouchableOpacity>
-
-                <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
-                    <Home size={28} color="#fff" />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={styles.navItem}
-                    onPress={() => router.push({ pathname: "/petugas/profile", params: { from: "dashboard" } })}
-                >
-                    <User size={24} color="#fff" />
-                </TouchableOpacity>
-            </View>
+            {/* Bottom Navigation */}
+                        <View style={[styles.bottomNav, { backgroundColor: colors.primary }]}>
+                            <TouchableOpacity
+                                style={styles.navItem}
+                                onPress={() => router.push("/petugas/settings")}
+                            >
+                                <SettingsIcon size={28} color="#fff" />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                            style={[styles.navItem, styles.navItemActive]}
+                                onPress={() => router.push("/petugas/dashboardPetugas")}
+                            >
+                                <Home size={24} color="#fff" />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.navItem}
+                                onPress={() => router.push({
+                                    pathname: "/petugas/profile",
+                                    params: { from: "settings" }
+                                })}
+                            >
+                                <UserIcon size={24} color="#fff" />
+                            </TouchableOpacity>
+                        </View>
 
             {/* Modal Edit */}
             <Modal
@@ -1482,9 +1490,30 @@ const styles = StyleSheet.create({
         textAlign: "center"
     },
 
-    bottomNav: { flexDirection: "row", justifyContent: "space-evenly", backgroundColor: "#7CB342", paddingVertical: 15 },
-    navItem: { padding: 10 },
-    navItemActive: { backgroundColor: "#FFA726", borderRadius: 30 },
+    bottomNav: {
+        flexDirection: "row",
+        borderRadius: 35,
+        marginHorizontal: 20,
+        marginBottom: 20,
+        paddingVertical: 15,
+        paddingHorizontal: 30,
+        justifyContent: "space-around",
+        alignItems: "center",
+        elevation: 5,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+    },
+    navItem: {
+        padding: 10,
+    },
+    navItemActive: {
+        backgroundColor: "rgba(255, 175, 1, 1)",
+        borderRadius: 50,
+        padding: 15,
+    },
+  
 
     // Modal Styles
     modalOverlay: {

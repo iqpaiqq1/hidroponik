@@ -23,8 +23,9 @@ import {
     User as UserIcon,
     X,
 } from "lucide-react-native";
-import { useLanguage } from "../petugas/contexts/LanguageContext";
-import { useTheme } from "../petugas/contexts/ThemeContext";
+import { useLanguage } from "../kurir/contexts/LanguageContext";
+import { useTheme } from "../kurir/contexts/ThemeContext";
+import { Ionicons } from "@expo/vector-icons";
 
 interface UserData {
     gmail: string;
@@ -272,29 +273,29 @@ export default function SettingsScreen() {
                 </View>
             </Modal>
 
-            {/* Bottom Navigation */}
-            <View style={[styles.bottomNav, { backgroundColor: colors.primary }]}>
-                <TouchableOpacity
-                    style={[styles.navItem, styles.navItemActive]}
-                >
-                    <SettingsIcon size={28} color="#fff" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={styles.navItem}
-                    onPress={() => router.push("/petugas/dashboardPetugas")}
-                >
-                    <Home size={24} color="#fff" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={styles.navItem}
-                    onPress={() => router.push({
-                        pathname: "/petugas/profile",
-                        params: { from: "settings" }
-                    })}
-                >
-                    <UserIcon size={24} color="#fff" />
-                </TouchableOpacity>
-            </View>
+           {/* Bottom Navigation */}
+                       <View style={[styles.bottomNav, { backgroundColor: "#dc2626" }]}>
+                           <TouchableOpacity
+                               style={[styles.navItem, styles.navItemActive]}
+                           >
+                               <SettingsIcon size={28} color="#fff" />
+                           </TouchableOpacity>
+                           <TouchableOpacity
+                               style={styles.navItem}
+                               onPress={() => router.push("/petugas/dashboardPetugas")}
+                           >
+                               <Home size={24} color="#fff" />
+                           </TouchableOpacity>
+                           <TouchableOpacity
+                               style={styles.navItem}
+                               onPress={() => router.push({
+                                   pathname: "/petugas/profile",
+                                   params: { from: "settings" }
+                               })}
+                           >
+                               <UserIcon size={24} color="#fff" />
+                           </TouchableOpacity>
+                       </View>
         </View>
     );
 }
@@ -498,11 +499,10 @@ const createStyles = (colors: any, isDark: boolean) => StyleSheet.create({
         padding: 10,
     },
     navItemActive: {
-        backgroundColor: "rgba(255, 174, 1, 0.2)",
+        backgroundColor: "rgba(255,255,255,0.2)",
         borderRadius: 50,
         padding: 15,
     },
-    // Di createStyles function, tambahkan styles berikut:
 
     currentLanguageInfo: {
         padding: 16,

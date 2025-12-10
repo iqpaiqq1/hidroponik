@@ -157,7 +157,7 @@ export default function DataTernak() {
 
   const handleDelete = async (id_pakan: number) => {
     try {
-      const response = await fetch(`http://172.24.169.183:8000/api/pakan/${id_pakan}`, {
+      const response = await fetch(`http://10.79.192.183:8000/api/pakan/${id_pakan}`, {
         method: "DELETE",
       });
 
