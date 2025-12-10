@@ -264,17 +264,6 @@ export default function DataTernak() {
 
       <View style={styles.container}>
         <View style={styles.topNavContainer}>
-          <TouchableOpacity
-            style={styles.navButton}
-            onPress={() =>
-              router.push({
-                pathname: "/(tabs)/ternak/hewan" as any,
-                params: { gmail, nama },
-              })
-            }
-          >
-            <Text style={styles.navText}>Hewan</Text>
-          </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.navButton}
