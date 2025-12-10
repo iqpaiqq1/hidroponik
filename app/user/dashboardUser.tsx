@@ -141,7 +141,7 @@ export default function DashboardUser() {
             ];
         }
 
-        if (selectedCategory === "All" || selectedCategory === "Chicken") {
+        if (selectedCategory === "All" || selectedCategory === "Animal") {
             combined = [
                 ...combined,
                 ...kandang.map((k) => ({ ...k, type: "kandang" })),
@@ -317,18 +317,18 @@ export default function DashboardUser() {
                             <TouchableOpacity
                                 style={[
                                     styles.categoryButton,
-                                    selectedCategory === "Chicken" && styles.categoryButtonActive,
+                                    selectedCategory === "Hewan" && styles.categoryButtonActive,
                                 ]}
-                                onPress={() => setSelectedCategory("Chicken")}
+                                onPress={() => setSelectedCategory("Hewan")}
                             >
-                                <PawPrint size={24} color={selectedCategory === "Chicken" ? "#fff" : colors.primary} />
+                                <PawPrint size={24} color={selectedCategory === "Hewan" ? "#fff" : colors.primary} />
                                 <Text
                                     style={[
                                         styles.categoryButtonText,
-                                        selectedCategory === "Chicken" && styles.categoryButtonTextActive,
+                                        selectedCategory === "Hewan" && styles.categoryButtonTextActive,
                                     ]}
                                 >
-                                    {t("chicken")}
+                                    {t("Animal")}
                                 </Text>
                             </TouchableOpacity>
                         </View>
